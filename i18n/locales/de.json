@@ -1,14 +1,14 @@
 {
   "index": {
     "seo": {
-      "title": "LocalSend Web",
-      "description": "Teile Dateien zwischen deinem Browser und anderen Geräten, auf denen LocalSend ausgeführt wird."
+      "title": "ClevrSend Web",
+      "description": "Teile Dateien zwischen deinem Browser und anderen Geräten mit ClevrSend."
     },
     "connecting": "Verbinde...",
-    "webCryptoNotSupported": "Dein Browser unterstützt LocalSend nicht: Web Crypto API wird benötigt.",
+    "webCryptoNotSupported": "Dein Browser unterstützt ClevrSend nicht: Web Crypto API wird benötigt.",
     "empty": {
-      "title": "Öffne LocalSend auf einem anderen Gerät.",
-      "deviceHint": "Öffne diese Seite in einem anderen Browser oder native Version (v1.18.0 oder neuer).",
+      "title": "Öffne ClevrSend auf einem anderen Gerät.",
+      "deviceHint": "Öffne diese Seite in einem anderen Browser-Tab oder kompatiblen Gerät.",
       "lanHint": "Nur Geräte im selben Netzwerk werden angezeigt."
     },
     "you": "Du bist:",
