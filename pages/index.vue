@@ -620,6 +620,7 @@
 <script setup lang="ts">
 import {
   setupConnection,
+  setupQRSignaling,
   startSendSession,
   store,
   updateAliasState,
