@@ -164,7 +164,7 @@ export async function generateQRConnectOffer(
 export async function processQRConnectOffer(
   qrData: string,
   localAlias: string
-): Promise<{ peerId: string; peerAlias: string; senderId: string; pc: RTCPeerConnection; answer: string }> {
+): Promise<{ peerId: string; peerAlias: string; senderId: string; pc: RTCPeerConnection; answer: string; dataChannelPromise: Promise<RTCDataChannel> }> {
 
   // Parse QR data - could be URL or direct JSON
   let offerData: QRConnectOffer;
@@ -244,13 +244,21 @@ export async function processQRConnectOffer(
   });
 
   // IMPORTANT: Setup datachannel listener BEFORE setRemoteDescription
-  // Otherwise the datachannel event will fire before we have a listener!
+  // Create promise that resolves when datachannel is received
+  let dataChannelResolver: (channel: RTCDataChannel) => void;
+  const dataChannelPromise = new Promise<RTCDataChannel>((resolve) => {
+    dataChannelResolver = resolve;
+  });
+
   console.log('🔧 RECEIVER: Setting up datachannel listener BEFORE setRemoteDescription...');
   pc.addEventListener('datachannel', (event) => {
     console.log('📡 QR-Connect RECEIVER: Data channel received IN processQRConnectOffer!');
     console.log('   - label:', event.channel.label);
     console.log('   - readyState:', event.channel.readyState);
     console.log('   - id:', event.channel.id);
+
+    // Resolve the promise with the datachannel
+    dataChannelResolver(event.channel);
   });
 
   // Set remote description from QR code
@@ -294,7 +302,8 @@ export async function processQRConnectOffer(
     peerAlias: offerData.peerAlias,
     senderId: offerData.senderId, // Return senderId for answer routing
     pc,
-    answer: answerString
+    answer: answerString,
+    dataChannelPromise // Return promise that resolves when datachannel is received
   };
 }
 

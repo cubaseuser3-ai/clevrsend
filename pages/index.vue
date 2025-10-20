@@ -1803,7 +1803,7 @@ const handleQrScanned = async (qrData: string) => {
 
     // Process QR code and create answer (this is for RECEIVER only)
     logWebRTC('Processing QR offer and creating answer...');
-    const { peerId, peerAlias, senderId, pc, answer } = await processQRConnectOffer(
+    const { peerId, peerAlias, senderId, pc, answer, dataChannelPromise } = await processQRConnectOffer(
       qrData,
       store.client.alias
     );
@@ -1817,16 +1817,57 @@ const handleQrScanned = async (qrData: string) => {
       alias: peerAlias
     };
 
-    // Setup connection listeners
+    // Wait for datachannel to be received
+    logQR('⏳ Waiting for DataChannel from sender...');
+    const dataChannel = await dataChannelPromise;
+    logQR('✅ DataChannel received!');
+    logQR(`   - label: ${dataChannel.label}`);
+    logQR(`   - readyState: ${dataChannel.readyState}`);
+
+    // Store datachannel
+    qrDataChannel.value = dataChannel;
+
+    // Setup datachannel event listeners
+    dataChannel.addEventListener('open', () => {
+      logQR('✅ RECEIVER: DataChannel OPEN!');
+      qrConnectionStatus.value = {
+        type: 'success',
+        icon: 'mdi:check-circle',
+        message: `Verbunden mit ${peerAlias}! Bereit für Dateitransfer`
+      };
+
+      // Setup file receiver
+      setupQRFileReceiver(dataChannel);
+    });
+
+    dataChannel.addEventListener('close', () => {
+      logQR('❌ RECEIVER: DataChannel CLOSED');
+      qrConnectionStatus.value = {
+        type: 'error',
+        icon: 'mdi:close-circle',
+        message: 'Verbindung getrennt'
+      };
+      qrPeerConnection.value = null;
+      qrDataChannel.value = null;
+      qrConnectedPeer.value = null;
+    });
+
+    dataChannel.addEventListener('error', (error) => {
+      logError(`DataChannel error: ${error}`, 'QR');
+      qrConnectionStatus.value = {
+        type: 'error',
+        icon: 'mdi:alert-circle',
+        message: `Fehler: Datenkanal-Fehler`
+      };
+    });
+
+    // Setup connection listeners for ICE state
     setupQRConnectionListeners(pc, {
       onConnected: () => {
-        qrConnectionStatus.value = {
-          type: 'success',
-          icon: 'mdi:check-circle',
-          message: `Verbunden mit ${peerAlias}! Bereit für Dateitransfer`
-        };
+        logQR('✅ ICE Connection: connected');
       },
       onDisconnected: () => {
+        logQR('❌ ICE Connection: disconnected');
         qrConnectionStatus.value = {
           type: 'error',
           icon: 'mdi:close-circle',
@@ -1837,24 +1878,8 @@ const handleQrScanned = async (qrData: string) => {
         qrConnectedPeer.value = null;
       },
       onDataChannel: (channel) => {
-        qrDataChannel.value = channel;
-        console.log('🎉 QR-Connect RECEIVER: Channel established in index.vue!');
-        console.log('   - qrDataChannel is set:', !!qrDataChannel.value);
-        console.log('   - Channel readyState:', channel.readyState);
-
-        // Setup listener for when channel opens
-        channel.addEventListener('open', () => {
-          console.log('✅ QR-Connect RECEIVER: Channel OPENED in index.vue!');
-          console.log('   - Channel readyState:', channel.readyState);
-          qrConnectionStatus.value = {
-            type: 'success',
-            icon: 'mdi:check-circle',
-            message: `Verbunden mit ${peerAlias}! Bereit für Dateitransfer`
-          };
-
-          // Setup file receiver
-          setupQRFileReceiver(channel);
-        });
+        // This shouldn't be called anymore since we handle it above
+        logQR('⚠️ onDataChannel callback called (should not happen)');
       },
       onError: (error) => {
         qrConnectionStatus.value = {
