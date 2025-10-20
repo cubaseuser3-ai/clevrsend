@@ -622,7 +622,7 @@
 
     <!-- Version Number -->
     <div class="version-number">
-      v1.0.36
+      v1.0.37
     </div>
   </div>
 </template>
@@ -1224,7 +1224,9 @@ const generateQrSendCode = async () => {
 
     // Setup data channel open listener to update status
     dataChannel.addEventListener('open', () => {
-      console.log('QR-Connect: Data channel is now open and ready for file transfer');
+      console.log('🎉 QR-Connect SENDER: Channel opened in index.vue!');
+      console.log('   - qrDataChannel is set:', !!qrDataChannel.value);
+      console.log('   - Channel readyState:', dataChannel.readyState);
       qrConnectionStatus.value = {
         type: 'success',
         icon: 'mdi:check-circle',
@@ -1429,11 +1431,14 @@ const handleQrScanned = async (qrData: string) => {
       },
       onDataChannel: (channel) => {
         qrDataChannel.value = channel;
-        console.log('Data channel established (receiver)');
+        console.log('🎉 QR-Connect RECEIVER: Channel established in index.vue!');
+        console.log('   - qrDataChannel is set:', !!qrDataChannel.value);
+        console.log('   - Channel readyState:', channel.readyState);
 
         // Setup listener for when channel opens
         channel.addEventListener('open', () => {
-          console.log('QR-Connect: Receiver data channel is now open');
+          console.log('✅ QR-Connect RECEIVER: Channel OPENED in index.vue!');
+          console.log('   - Channel readyState:', channel.readyState);
           qrConnectionStatus.value = {
             type: 'success',
             icon: 'mdi:check-circle',

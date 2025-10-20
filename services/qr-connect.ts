@@ -50,15 +50,21 @@ export async function generateQRConnectOffer(
 
   // Setup data channel event listeners
   dataChannel.addEventListener('open', () => {
-    console.log('QR-Connect: Data channel opened (sender)');
+    console.log('✅ QR-Connect SENDER: Data channel OPEN - Ready to send files');
+    console.log('   - readyState:', dataChannel.readyState);
+    console.log('   - bufferedAmount:', dataChannel.bufferedAmount);
   });
 
   dataChannel.addEventListener('close', () => {
-    console.log('QR-Connect: Data channel closed (sender)');
+    console.log('❌ QR-Connect SENDER: Data channel CLOSED');
   });
 
   dataChannel.addEventListener('error', (error) => {
-    console.error('QR-Connect: Data channel error (sender):', error);
+    console.error('❌ QR-Connect SENDER: Data channel ERROR:', error);
+  });
+
+  dataChannel.addEventListener('message', (event) => {
+    console.log('📨 QR-Connect SENDER: Received message:', event.data);
   });
 
   // Create offer
@@ -223,6 +229,91 @@ export async function completeQRConnection(
 }
 
 /**
+ * Send files over QR-Connect data channel
+ */
+export async function sendFilesViaQRConnect(
+  dataChannel: RTCDataChannel,
+  files: File[],
+  onProgress?: (progress: { fileIndex: number; fileName: string; sent: number; total: number }) => void
+): Promise<void> {
+  if (dataChannel.readyState !== 'open') {
+    throw new Error(`Data channel not ready. State: ${dataChannel.readyState}`);
+  }
+
+  console.log('📤 Starting QR-Connect file transfer...');
+  console.log(`   - Files to send: ${files.length}`);
+  console.log(`   - Channel state: ${dataChannel.readyState}`);
+
+  for (let fileIndex = 0; fileIndex < files.length; fileIndex++) {
+    const file = files[fileIndex];
+    console.log(`📄 Sending file ${fileIndex + 1}/${files.length}: ${file.name} (${file.size} bytes)`);
+
+    // Send file metadata first
+    const metadata = {
+      type: 'file-start',
+      fileName: file.name,
+      fileSize: file.size,
+      fileType: file.type,
+      fileIndex,
+      totalFiles: files.length
+    };
+
+    dataChannel.send(JSON.stringify(metadata));
+    console.log('   - Metadata sent');
+
+    // Read and send file in chunks
+    const chunkSize = 16384; // 16 KB chunks
+    const reader = new FileReader();
+    let offset = 0;
+
+    while (offset < file.size) {
+      const slice = file.slice(offset, offset + chunkSize);
+      const arrayBuffer = await new Promise<ArrayBuffer>((resolve, reject) => {
+        reader.onload = () => resolve(reader.result as ArrayBuffer);
+        reader.onerror = () => reject(reader.error);
+        reader.readAsArrayBuffer(slice);
+      });
+
+      // Wait for buffer to drain if needed
+      while (dataChannel.bufferedAmount > chunkSize * 4) {
+        await new Promise(resolve => setTimeout(resolve, 10));
+      }
+
+      dataChannel.send(arrayBuffer);
+      offset += arrayBuffer.byteLength;
+
+      if (onProgress) {
+        onProgress({
+          fileIndex,
+          fileName: file.name,
+          sent: offset,
+          total: file.size
+        });
+      }
+    }
+
+    // Send file-end marker
+    const endMarker = {
+      type: 'file-end',
+      fileName: file.name,
+      fileIndex
+    };
+    dataChannel.send(JSON.stringify(endMarker));
+
+    console.log(`✅ File sent: ${file.name}`);
+  }
+
+  // Send transfer-complete marker
+  const completeMarker = {
+    type: 'transfer-complete',
+    totalFiles: files.length
+  };
+  dataChannel.send(JSON.stringify(completeMarker));
+
+  console.log('✅ QR-Connect file transfer complete!');
+}
+
+/**
  * Setup event listeners for P2P connection
  */
 export function setupQRConnectionListeners(
@@ -245,19 +336,28 @@ export function setupQRConnectionListeners(
   });
 
   pc.addEventListener('datachannel', (event) => {
-    console.log('QR-Connect: Data channel received', event.channel.label, 'readyState:', event.channel.readyState);
+    console.log('📡 QR-Connect RECEIVER: Data channel received!');
+    console.log('   - label:', event.channel.label);
+    console.log('   - readyState:', event.channel.readyState);
+    console.log('   - id:', event.channel.id);
 
     // Setup event listeners for the received channel
     event.channel.addEventListener('open', () => {
-      console.log('QR-Connect: Received data channel opened');
+      console.log('✅ QR-Connect RECEIVER: Data channel OPEN - Ready to receive files');
+      console.log('   - readyState:', event.channel.readyState);
+      console.log('   - bufferedAmount:', event.channel.bufferedAmount);
     });
 
     event.channel.addEventListener('close', () => {
-      console.log('QR-Connect: Received data channel closed');
+      console.log('❌ QR-Connect RECEIVER: Data channel CLOSED');
     });
 
     event.channel.addEventListener('error', (error) => {
-      console.error('QR-Connect: Received data channel error:', error);
+      console.error('❌ QR-Connect RECEIVER: Data channel ERROR:', error);
+    });
+
+    event.channel.addEventListener('message', (evt) => {
+      console.log('📨 QR-Connect RECEIVER: Received message, size:', evt.data?.byteLength || evt.data?.length || 'unknown');
     });
 
     callbacks.onDataChannel?.(event.channel);
