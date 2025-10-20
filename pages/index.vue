@@ -1542,6 +1542,13 @@ const handleQrScanned = async (qrData: string) => {
 };
 
 onMounted(async () => {
+  // Log app version from package.json
+  const { version } = await import('~/package.json');
+  console.log(`%c🚀 ClevrSend v${version} %c- powered by MyTech`,
+    'color: #00ff88; font-weight: bold; font-size: 16px;',
+    'color: #888; font-size: 12px;'
+  );
+
   webCryptoSupported.value = isWebCryptoSupported();
 
   // Check for QR-Connect URL parameter
