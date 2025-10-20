@@ -14,7 +14,7 @@
         <img
           src="/logo.png"
           alt="ClevrSend Logo"
-          class="h-16 w-16 logo-white"
+          class="h-8 w-8 logo-white"
         />
         <div class="flex flex-col gap-0" style="margin-left: -10px;">
           <BlurText
@@ -382,6 +382,15 @@
             <Icon :name="qrConnectionStatus.icon" size="24" />
             <span>{{ qrConnectionStatus.message }}</span>
           </div>
+        </div>
+
+        <!-- File Upload Button (shown when connection is ready) -->
+        <div v-if="qrDataChannel && qrDataChannel.readyState === 'open'" class="qr-file-upload-section">
+          <button @click="openQrFileDialog" class="qr-file-upload-button">
+            <Icon name="mdi:file-upload" size="32" />
+            <span>Dateien senden</span>
+          </button>
+          <p class="qr-file-upload-hint">Klicke hier, um Dateien über QR-Connect zu senden</p>
         </div>
 
         <!-- QR Send Section -->
@@ -1178,6 +1187,16 @@ const targetId = ref("");
 
 const selectPeer = (id: string) => {
   targetId.value = id;
+  openFileDialog();
+};
+
+// Open file dialog for QR-Connect
+const openQrFileDialog = () => {
+  logInteraction('CLICK', 'QR-Connect Dateien senden Button');
+  // Set targetId to QR peer if available
+  if (qrConnectedPeer.value) {
+    targetId.value = qrConnectedPeer.value.id;
+  }
   openFileDialog();
 };
 
@@ -2817,6 +2836,43 @@ onMounted(async () => {
   background: rgba(59, 130, 246, 0.1);
   border: 1px solid rgba(59, 130, 246, 0.3);
   color: rgb(96, 165, 250);
+}
+
+.qr-file-upload-section {
+  margin-bottom: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.qr-file-upload-button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 2rem 4rem;
+  border-radius: 1rem;
+  border: 3px solid rgba(34, 197, 94, 0.5);
+  background: rgba(34, 197, 94, 0.1);
+  cursor: pointer;
+  transition: all 0.3s;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: rgb(74, 222, 128);
+}
+
+.qr-file-upload-button:hover {
+  background: rgba(34, 197, 94, 0.2);
+  border-color: rgba(34, 197, 94, 0.7);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(34, 197, 94, 0.3);
+}
+
+.qr-file-upload-hint {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.875rem;
+  text-align: center;
 }
 
 .qr-connect-section {
