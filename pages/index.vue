@@ -610,9 +610,16 @@
       @scanned="handleQrScanned"
     />
 
-    <!-- Version Number -->
-    <div class="version-number">
-      v{{ appVersion }}
+    <!-- Version Numbers -->
+    <div class="version-info">
+      <div class="version-item">
+        <span class="version-label">Frontend:</span>
+        <span class="version-value">v{{ appVersion }}</span>
+      </div>
+      <div class="version-item" v-if="backendVersion">
+        <span class="version-label">Backend:</span>
+        <span class="version-value">v{{ backendVersion }}</span>
+      </div>
     </div>
   </div>
 </template>
@@ -693,6 +700,7 @@ const activeMode = ref<'auto' | 'qr'>('auto');
 
 // App version (dynamically imported from package.json)
 const appVersion = ref('...');
+const backendVersion = ref<string | null>(null);
 
 // QR-Connect state
 const showQrSendCode = ref(false);
@@ -1570,6 +1578,18 @@ onMounted(async () => {
   webCryptoSupported.value = isWebCryptoSupported();
   logApp(`WebCrypto supported: ${webCryptoSupported.value}`);
 
+  // Fetch backend version from signaling server
+  try {
+    const response = await fetch('https://clevrsend-signaling.onrender.com/health');
+    const data = await response.json();
+    if (data.version) {
+      backendVersion.value = data.version;
+      logApp(`Backend Version: ${data.version}`);
+    }
+  } catch (error) {
+    console.warn('Could not fetch backend version:', error);
+  }
+
   // Check for QR-Connect URL parameter
   if (typeof window !== 'undefined') {
     const urlParams = new URLSearchParams(window.location.search);
@@ -1904,15 +1924,32 @@ onMounted(async () => {
   box-shadow: 0 0 10px rgba(139, 92, 246, 0.3);
 }
 
-/* Version Number */
-.version-number {
+/* Version Info */
+.version-info {
   position: fixed;
   bottom: 1rem;
   right: 1rem;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  align-items: flex-end;
+}
+
+.version-item {
+  display: flex;
+  gap: 0.5rem;
   font-size: 0.75rem;
   color: rgba(255, 255, 255, 0.3);
-  z-index: 30;
   font-weight: 500;
+}
+
+.version-label {
+  opacity: 0.6;
+}
+
+.version-value {
+  font-weight: 600;
 }
 
 /* Fade Transition */
