@@ -612,7 +612,7 @@
 
     <!-- Version Number -->
     <div class="version-number">
-      v1.0.42
+      v{{ appVersion }}
     </div>
   </div>
 </template>
@@ -690,6 +690,9 @@ const qrCodeCanvas = ref<HTMLCanvasElement | null>(null);
 
 // Mode tabs state
 const activeMode = ref<'auto' | 'qr'>('auto');
+
+// App version (dynamically imported from package.json)
+const appVersion = ref('...');
 
 // QR-Connect state
 const showQrSendCode = ref(false);
@@ -1217,37 +1220,14 @@ const generateQrSendCode = async () => {
     }
     logQR(`Client initialized: ${store.client.alias} (${store.client.id})`);
 
-    // Connect to QR-specific signaling server (Deno server with QR_ANSWER support)
-    logSignaling('Connecting to QR-Connect signaling server...');
-    await setupQRSignaling();
-    logSignaling('✅ QR Signaling setup complete');
+    // Use regular client ID for QR-Connect (no separate signaling needed)
+    logQR(`Using regular signaling for QR_ANSWER routing`);
 
-    // Wait for HELLO message to get QR client ID
-    logQR('⏳ Waiting for QR Client ID from HELLO message...');
-    await new Promise<void>((resolve) => {
-      const checkInterval = setInterval(() => {
-        if (store.qrClientId) {
-          clearInterval(checkInterval);
-          resolve();
-        }
-      }, 100);
-      // Timeout after 5 seconds
-      setTimeout(() => {
-        clearInterval(checkInterval);
-        resolve();
-      }, 5000);
-    });
-
-    if (!store.qrClientId) {
-      throw new Error('Failed to get QR client ID from signaling server');
-    }
-    logQR(`✅ QR Client ID received: ${store.qrClientId}`);
-
-    // Generate WebRTC offer with ICE candidates (include QR senderId for answer routing)
+    // Generate WebRTC offer with ICE candidates (include senderId for answer routing)
     logWebRTC('Generating WebRTC offer...');
     const { qrData, peerId, pc, dataChannel } = await generateQRConnectOffer(
       store.client.alias,
-      store.qrClientId // Pass QR signaling client ID
+      store.client.id // Use regular client ID
     );
     logWebRTC(`✅ Offer generated - Peer ID: ${peerId}`);
 
@@ -1515,24 +1495,20 @@ const handleQrScanned = async (qrData: string) => {
       message: 'Sende Antwort an Sender...'
     };
 
-    logSignaling(`📤 Connecting to QR signaling to send answer to: ${peerAlias}`);
+    logSignaling(`📤 Sending answer to ${peerAlias} via regular signaling`);
     logSignaling(`Target sender ID: ${senderId}`);
 
-    // Connect to QR signaling server (Deno server with QR_ANSWER support)
+    // Send answer via regular signaling (LocalSend server)
     try {
-      await setupQRSignaling();
-      logSignaling('✅ Connected to QR signaling server');
-
-      // Send answer to sender via QR WebSocket signaling
-      if (store.qrSignaling && senderId) {
-        logSignaling(`Sending QR_ANSWER to ${senderId}`);
-        store.qrSignaling.send({
+      if (store.signaling && senderId) {
+        logSignaling(`Sending QR_ANSWER to ${senderId} via LocalSend server`);
+        store.signaling.send({
           type: 'QR_ANSWER',
           targetId: senderId,
           answer: answer
         } as any);
 
-        logSignaling('✅ QR_ANSWER sent to sender via QR signaling');
+        logSignaling('✅ QR_ANSWER sent to sender via regular signaling');
         logQR('✅ RECEIVER: Answer transmission complete');
 
         qrConnectionStatus.value = {
@@ -1541,11 +1517,11 @@ const handleQrScanned = async (qrData: string) => {
           message: 'Verbindung wird aufgebaut...'
         };
       } else {
-        logError('No QR signaling connection available!', 'RECEIVER');
+        logError('No signaling connection available!', 'RECEIVER');
         qrConnectionStatus.value = {
           type: 'error',
           icon: 'mdi:alert-circle',
-          message: 'Keine QR-Signaling-Verbindung'
+          message: 'Keine Signaling-Verbindung'
         };
       }
     } catch (err) {
@@ -1570,6 +1546,8 @@ const handleQrScanned = async (qrData: string) => {
 onMounted(async () => {
   // Log app version from package.json
   const { version } = await import('~/package.json');
+  appVersion.value = version; // Set version for UI display
+
   console.log(`%c🚀 ClevrSend v${version} %c- powered by MyTech`,
     'color: #00ff88; font-weight: bold; font-size: 16px;',
     'color: #888; font-size: 12px;'
