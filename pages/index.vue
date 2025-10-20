@@ -1252,6 +1252,29 @@ onChange(async (files) => {
 
   if (!store.signaling) return;
 
+  // Check for large files and show warning
+  const totalSize = Array.from(files).reduce((acc, file) => acc + file.size, 0);
+  const largeFileThreshold = 500 * 1024 * 1024; // 500 MB
+
+  if (totalSize > largeFileThreshold) {
+    const sizeMB = (totalSize / (1024 * 1024)).toFixed(1);
+    showNotification(
+      `⚠️ Große Datei(en): ${sizeMB} MB. Transfer kann lange dauern. Browser-Tab muss geöffnet bleiben!`,
+      'warning'
+    );
+  }
+
+  // Warn about individual large files
+  Array.from(files).forEach(file => {
+    if (file.size > largeFileThreshold) {
+      const sizeMB = (file.size / (1024 * 1024)).toFixed(1);
+      showNotification(
+        `⚠️ "${file.name}" ist ${sizeMB} MB groß. Transfer kann mehrere Minuten dauern.`,
+        'warning'
+      );
+    }
+  });
+
   await startSendSession({
     files,
     targetId: targetId.value,
@@ -1402,6 +1425,29 @@ const openQrFileDialog = async () => {
       showNotification('QR-Verbindung ist nicht bereit. Bitte erneut verbinden.', 'error');
       return;
     }
+
+    // Check for large files and show warning
+    const totalSize = Array.from(files).reduce((acc, file) => acc + file.size, 0);
+    const largeFileThreshold = 500 * 1024 * 1024; // 500 MB
+
+    if (totalSize > largeFileThreshold) {
+      const sizeMB = (totalSize / (1024 * 1024)).toFixed(1);
+      showNotification(
+        `⚠️ Große Datei(en): ${sizeMB} MB. Transfer kann lange dauern. Browser-Tab muss geöffnet bleiben!`,
+        'warning'
+      );
+    }
+
+    // Warn about individual large files
+    Array.from(files).forEach(file => {
+      if (file.size > largeFileThreshold) {
+        const sizeMB = (file.size / (1024 * 1024)).toFixed(1);
+        showNotification(
+          `⚠️ "${file.name}" ist ${sizeMB} MB groß. Transfer kann mehrere Minuten dauern.`,
+          'warning'
+        );
+      }
+    });
 
     // Initialize session state
     store.session.state = SessionState.sending;
