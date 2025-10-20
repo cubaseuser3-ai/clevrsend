@@ -30,17 +30,33 @@ export async function generateQRConnectOffer(
   // Create unique peer ID
   const peerId = crypto.randomUUID();
 
-  // Create RTCPeerConnection with STUN servers
+  // Create RTCPeerConnection with STUN and TURN servers
   const pc = new RTCPeerConnection({
     iceServers: [
+      // STUN servers for discovering public IP
       ...defaultStun.map(url => ({ urls: url })),
-      // Add free TURN server as fallback
+      // Multiple TURN servers for NAT traversal
       {
-        urls: 'turn:openrelay.metered.ca:80',
+        urls: [
+          'turn:openrelay.metered.ca:80',
+          'turn:openrelay.metered.ca:443',
+          'turn:openrelay.metered.ca:443?transport=tcp'
+        ],
         username: 'openrelayproject',
         credential: 'openrelayproject'
+      },
+      {
+        urls: 'turn:relay.metered.ca:80',
+        username: 'e17f4b83b40d5c2f49c14d1e',
+        credential: 'UJlROZM2MNPsUfSn'
+      },
+      {
+        urls: 'turn:relay.metered.ca:443',
+        username: 'e17f4b83b40d5c2f49c14d1e',
+        credential: 'UJlROZM2MNPsUfSn'
       }
-    ]
+    ],
+    iceCandidatePoolSize: 10
   });
 
   // Create data channel for file transfer
@@ -156,16 +172,33 @@ export async function processQRConnectOffer(
     throw new Error('Invalid QR code: Not a ClevrSend QR-Connect code');
   }
 
-  // Create RTCPeerConnection
+  // Create RTCPeerConnection with STUN and TURN servers
   const pc = new RTCPeerConnection({
     iceServers: [
+      // STUN servers for discovering public IP
       ...defaultStun.map(url => ({ urls: url })),
+      // Multiple TURN servers for NAT traversal
       {
-        urls: 'turn:openrelay.metered.ca:80',
+        urls: [
+          'turn:openrelay.metered.ca:80',
+          'turn:openrelay.metered.ca:443',
+          'turn:openrelay.metered.ca:443?transport=tcp'
+        ],
         username: 'openrelayproject',
         credential: 'openrelayproject'
+      },
+      {
+        urls: 'turn:relay.metered.ca:80',
+        username: 'e17f4b83b40d5c2f49c14d1e',
+        credential: 'UJlROZM2MNPsUfSn'
+      },
+      {
+        urls: 'turn:relay.metered.ca:443',
+        username: 'e17f4b83b40d5c2f49c14d1e',
+        credential: 'UJlROZM2MNPsUfSn'
       }
-    ]
+    ],
+    iceCandidatePoolSize: 10
   });
 
   // Set remote description from QR code
@@ -364,10 +397,27 @@ export function setupQRConnectionListeners(
   });
 
   pc.addEventListener('iceconnectionstatechange', () => {
-    console.log('QR-Connect: ICE connection state:', pc.iceConnectionState);
+    console.log('🧊 QR-Connect: ICE connection state:', pc.iceConnectionState);
 
     if (pc.iceConnectionState === 'failed') {
+      console.error('❌ ICE Connection FAILED - NAT traversal problem!');
       callbacks.onError?.(new Error('ICE connection failed'));
+    } else if (pc.iceConnectionState === 'connected') {
+      console.log('✅ ICE Connection SUCCESSFUL!');
+    } else if (pc.iceConnectionState === 'disconnected') {
+      console.log('⚠️ ICE Connection DISCONNECTED');
+    }
+  });
+
+  pc.addEventListener('icegatheringstatechange', () => {
+    console.log('🧊 QR-Connect: ICE gathering state:', pc.iceGatheringState);
+  });
+
+  pc.addEventListener('icecandidate', (event) => {
+    if (event.candidate) {
+      console.log('🧊 ICE Candidate:', event.candidate.type, event.candidate.protocol, event.candidate.address);
+    } else {
+      console.log('🧊 ICE Gathering complete');
     }
   });
 }
