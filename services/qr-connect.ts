@@ -240,6 +240,16 @@ export async function processQRConnectOffer(
     console.log('🧊 RECEIVER ICE connection state:', pc.iceConnectionState);
   });
 
+  // IMPORTANT: Setup datachannel listener BEFORE setRemoteDescription
+  // Otherwise the datachannel event will fire before we have a listener!
+  console.log('🔧 RECEIVER: Setting up datachannel listener BEFORE setRemoteDescription...');
+  pc.addEventListener('datachannel', (event) => {
+    console.log('📡 QR-Connect RECEIVER: Data channel received IN processQRConnectOffer!');
+    console.log('   - label:', event.channel.label);
+    console.log('   - readyState:', event.channel.readyState);
+    console.log('   - id:', event.channel.id);
+  });
+
   // Set remote description from QR code
   await pc.setRemoteDescription(new RTCSessionDescription(offerData.offer));
 
