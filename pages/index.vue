@@ -14,7 +14,7 @@
         <img
           src="/logo.png"
           alt="ClevrSend Logo"
-          class="h-8 w-8 logo-white"
+          class="h-11 w-11 logo-white"
         />
         <div class="flex flex-col gap-0" style="margin-left: -10px;">
           <BlurText
@@ -692,6 +692,11 @@ import {
   type QRConnectOffer,
 } from "~/services/qr-connect";
 import {
+  sendFilesViaQRConnect,
+  QRFileReceiver,
+  type QRFileTransferProgress,
+} from "~/services/qr-file-transfer";
+import {
   logApp,
   logInteraction,
   logQR,
@@ -765,6 +770,7 @@ const qrConnectedPeer = ref<{
   id: string;
   alias: string;
 } | null>(null);
+const qrFileReceiver = ref<QRFileReceiver | null>(null);
 
 // QR Code modal state
 const showQrCodeModal = ref(false);
@@ -1217,14 +1223,94 @@ const selectPeer = (id: string) => {
   openFileDialog();
 };
 
+// Setup QR File Receiver
+const setupQRFileReceiver = (dataChannel: RTCDataChannel) => {
+  logFile('Setting up QR File Receiver...');
+
+  qrFileReceiver.value = new QRFileReceiver({
+    onProgress: (fileId: string, bytesReceived: number, totalBytes: number) => {
+      const percentage = Math.round((bytesReceived / totalBytes) * 100);
+      logFile(`Receiving file ${fileId}: ${percentage}%`);
+      // TODO: Update UI with progress
+    },
+    onFileComplete: (fileId: string, fileName: string, blob: Blob) => {
+      logFile(`✅ File received: ${fileName}`);
+      // Auto-download the file
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    },
+    onAllComplete: () => {
+      logFile('✅ All files received!');
+      alert('Alle Dateien erfolgreich empfangen!');
+    },
+    onError: (error: Error) => {
+      logError(error, 'QR_FILE_RECEIVE');
+      alert(`Fehler beim Empfangen: ${error.message}`);
+    },
+  });
+
+  // Listen for incoming messages
+  dataChannel.addEventListener('message', (event: MessageEvent) => {
+    if (qrFileReceiver.value) {
+      qrFileReceiver.value.handleMessage(event);
+    }
+  });
+
+  logFile('✅ QR File Receiver ready');
+};
+
 // Open file dialog for QR-Connect
-const openQrFileDialog = () => {
+const openQrFileDialog = async () => {
   logInteraction('CLICK', 'QR-Connect Dateien senden Button');
-  // Set targetId to QR peer if available
-  if (qrConnectedPeer.value) {
-    targetId.value = qrConnectedPeer.value.id;
-  }
-  openFileDialog();
+  logFile('Opening QR file dialog...');
+
+  // Create a file input element
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.multiple = true;
+
+  input.onchange = async (e: Event) => {
+    const target = e.target as HTMLInputElement;
+    if (!target.files || target.files.length === 0) return;
+
+    const files = target.files;
+    logFile(`Selected ${files.length} file(s) for QR transfer`);
+
+    if (!qrDataChannel.value || qrDataChannel.value.readyState !== 'open') {
+      logError('QR DataChannel is not open!', 'QR_FILE_UPLOAD');
+      alert('QR-Verbindung ist nicht bereit. Bitte erneut verbinden.');
+      return;
+    }
+
+    try {
+      await sendFilesViaQRConnect({
+        dataChannel: qrDataChannel.value,
+        files,
+        onProgress: (progress: QRFileTransferProgress) => {
+          logFile(`Progress: ${progress.fileName} - ${progress.percentage}%`);
+          // TODO: Update UI with progress
+        },
+        onComplete: () => {
+          logFile('✅ All files transferred successfully!');
+          alert('Alle Dateien erfolgreich gesendet!');
+        },
+        onError: (error: Error) => {
+          logError(error, 'QR_FILE_TRANSFER');
+          alert(`Fehler beim Senden: ${error.message}`);
+        },
+      });
+    } catch (error) {
+      logError(error as Error, 'QR_FILE_UPLOAD');
+    }
+  };
+
+  input.click();
 };
 
 const updateAlias = async () => {
@@ -1313,6 +1399,9 @@ const generateQrSendCode = async () => {
         icon: 'mdi:check-circle',
         message: 'Verbindung hergestellt! Bereit für Dateitransfer'
       };
+
+      // Setup file receiver (sender can also receive files)
+      setupQRFileReceiver(dataChannel);
     });
 
     // Setup connection listeners
@@ -1542,6 +1631,9 @@ const handleQrScanned = async (qrData: string) => {
             icon: 'mdi:check-circle',
             message: `Verbunden mit ${peerAlias}! Bereit für Dateitransfer`
           };
+
+          // Setup file receiver
+          setupQRFileReceiver(channel);
         });
       },
       onError: (error) => {
