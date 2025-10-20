@@ -25,7 +25,7 @@ export interface QRConnectAnswer {
  */
 export async function generateQRConnectOffer(
   alias: string
-): Promise<{ qrData: string; peerId: string; pc: RTCPeerConnection }> {
+): Promise<{ qrData: string; peerId: string; pc: RTCPeerConnection; dataChannel: RTCDataChannel }> {
 
   // Create unique peer ID
   const peerId = crypto.randomUUID();
@@ -46,6 +46,19 @@ export async function generateQRConnectOffer(
   // Create data channel for file transfer
   const dataChannel = pc.createDataChannel('files', {
     ordered: true
+  });
+
+  // Setup data channel event listeners
+  dataChannel.addEventListener('open', () => {
+    console.log('QR-Connect: Data channel opened (sender)');
+  });
+
+  dataChannel.addEventListener('close', () => {
+    console.log('QR-Connect: Data channel closed (sender)');
+  });
+
+  dataChannel.addEventListener('error', (error) => {
+    console.error('QR-Connect: Data channel error (sender):', error);
   });
 
   // Create offer
@@ -95,7 +108,7 @@ export async function generateQRConnectOffer(
   const appUrl = typeof window !== 'undefined' ? window.location.origin : 'https://clevrsend.vercel.app';
   const qrData = `${appUrl}/?qr=${offerBase64}`;
 
-  return { qrData, peerId, pc };
+  return { qrData, peerId, pc, dataChannel };
 }
 
 /**
@@ -232,7 +245,21 @@ export function setupQRConnectionListeners(
   });
 
   pc.addEventListener('datachannel', (event) => {
-    console.log('QR-Connect: Data channel received');
+    console.log('QR-Connect: Data channel received', event.channel.label, 'readyState:', event.channel.readyState);
+
+    // Setup event listeners for the received channel
+    event.channel.addEventListener('open', () => {
+      console.log('QR-Connect: Received data channel opened');
+    });
+
+    event.channel.addEventListener('close', () => {
+      console.log('QR-Connect: Received data channel closed');
+    });
+
+    event.channel.addEventListener('error', (error) => {
+      console.error('QR-Connect: Received data channel error:', error);
+    });
+
     callbacks.onDataChannel?.(event.channel);
   });
 

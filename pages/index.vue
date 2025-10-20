@@ -622,7 +622,7 @@
 
     <!-- Version Number -->
     <div class="version-number">
-      v1.0.34
+      v1.0.35
     </div>
   </div>
 </template>
@@ -1213,13 +1213,24 @@ const generateQrSendCode = async () => {
     }
 
     // Generate WebRTC offer with ICE candidates
-    const { qrData, peerId, pc } = await generateQRConnectOffer(store.client.alias);
+    const { qrData, peerId, pc, dataChannel } = await generateQRConnectOffer(store.client.alias);
 
     // Store the URL for display and copying
     qrSendUrl.value = qrData;
 
-    // Store peer connection
+    // Store peer connection and data channel
     qrPeerConnection.value = pc;
+    qrDataChannel.value = dataChannel;
+
+    // Setup data channel open listener to update status
+    dataChannel.addEventListener('open', () => {
+      console.log('QR-Connect: Data channel is now open and ready for file transfer');
+      qrConnectionStatus.value = {
+        type: 'success',
+        icon: 'mdi:check-circle',
+        message: 'Verbindung hergestellt! Bereit für Dateitransfer'
+      };
+    });
 
     // Setup connection listeners
     setupQRConnectionListeners(pc, {
