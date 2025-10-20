@@ -622,7 +622,7 @@
 
     <!-- Version Number -->
     <div class="version-number">
-      v1.0.35
+      v1.0.36
     </div>
   </div>
 </template>
@@ -1429,7 +1429,17 @@ const handleQrScanned = async (qrData: string) => {
       },
       onDataChannel: (channel) => {
         qrDataChannel.value = channel;
-        console.log('Data channel established');
+        console.log('Data channel established (receiver)');
+
+        // Setup listener for when channel opens
+        channel.addEventListener('open', () => {
+          console.log('QR-Connect: Receiver data channel is now open');
+          qrConnectionStatus.value = {
+            type: 'success',
+            icon: 'mdi:check-circle',
+            message: `Verbunden mit ${peerAlias}! Bereit für Dateitransfer`
+          };
+        });
       },
       onError: (error) => {
         qrConnectionStatus.value = {
