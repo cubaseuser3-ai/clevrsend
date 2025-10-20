@@ -646,6 +646,15 @@ import {
   setupQRConnectionListeners,
   type QRConnectOffer,
 } from "~/services/qr-connect";
+import {
+  logApp,
+  logInteraction,
+  logQR,
+  logWebRTC,
+  logSignaling,
+  logFile,
+  logError,
+} from "~/utils/logger";
 
 definePageMeta({
   title: "index.seo.title",
@@ -1189,6 +1198,9 @@ const updatePIN = async () => {
 // QR-Connect Functions
 const generateQrSendCode = async () => {
   try {
+    logInteraction('CLICK', 'QR-Connect senden Button');
+    logQR('🎬 START: Generate QR Send Code');
+
     qrCodeGenerating.value = true;
     qrConnectionStatus.value = {
       type: 'info',
@@ -1198,16 +1210,20 @@ const generateQrSendCode = async () => {
 
     showQrSendCode.value = true;
     await nextTick();
+    logQR('✅ QR Send Dialog opened');
 
     if (!store.client) {
       throw new Error('Client not initialized');
     }
+    logQR(`Client initialized: ${store.client.alias} (${store.client.id})`);
 
     // Connect to QR-specific signaling server (Deno server with QR_ANSWER support)
-    console.log('🔗 Connecting to QR-Connect signaling server...');
+    logSignaling('Connecting to QR-Connect signaling server...');
     await setupQRSignaling();
+    logSignaling('✅ QR Signaling setup complete');
 
     // Wait for HELLO message to get QR client ID
+    logQR('⏳ Waiting for QR Client ID from HELLO message...');
     await new Promise<void>((resolve) => {
       const checkInterval = setInterval(() => {
         if (store.qrClientId) {
@@ -1225,14 +1241,15 @@ const generateQrSendCode = async () => {
     if (!store.qrClientId) {
       throw new Error('Failed to get QR client ID from signaling server');
     }
-
-    console.log('📍 QR-Connect Sender ID:', store.qrClientId);
+    logQR(`✅ QR Client ID received: ${store.qrClientId}`);
 
     // Generate WebRTC offer with ICE candidates (include QR senderId for answer routing)
+    logWebRTC('Generating WebRTC offer...');
     const { qrData, peerId, pc, dataChannel } = await generateQRConnectOffer(
       store.client.alias,
       store.qrClientId // Pass QR signaling client ID
     );
+    logWebRTC(`✅ Offer generated - Peer ID: ${peerId}`);
 
     // Store the URL for display and copying
     qrSendUrl.value = qrData;
@@ -1411,6 +1428,9 @@ const startQrScan = async () => {
 
 const handleQrScanned = async (qrData: string) => {
   showQrScanner.value = false;
+  logInteraction('QR_SCAN', 'QR-Code gescannt');
+  logQR('🎬 START: Handle QR Scanned (RECEIVER)');
+  logQR(`QR Data length: ${qrData.length} chars`);
 
   try {
     qrConnectionStatus.value = {
@@ -1422,15 +1442,19 @@ const handleQrScanned = async (qrData: string) => {
     if (!store.client) {
       throw new Error('Client not initialized');
     }
+    logQR(`Receiver client: ${store.client.alias} (${store.client.id})`);
 
     // Note: Old two-way handshake code removed
     // Answer now comes automatically via WebSocket, not via QR scan
 
     // Process QR code and create answer (this is for RECEIVER only)
+    logWebRTC('Processing QR offer and creating answer...');
     const { peerId, peerAlias, senderId, pc, answer } = await processQRConnectOffer(
       qrData,
       store.client.alias
     );
+    logWebRTC(`✅ Answer created for peer: ${peerAlias}`);
+    logQR(`Sender ID from QR: ${senderId}`);
 
     // Store peer connection
     qrPeerConnection.value = pc;
@@ -1491,23 +1515,25 @@ const handleQrScanned = async (qrData: string) => {
       message: 'Sende Antwort an Sender...'
     };
 
-    console.log('📤 Connecting to QR signaling and sending answer to sender:', peerAlias);
-    console.log('   - senderId:', senderId);
+    logSignaling(`📤 Connecting to QR signaling to send answer to: ${peerAlias}`);
+    logSignaling(`Target sender ID: ${senderId}`);
 
     // Connect to QR signaling server (Deno server with QR_ANSWER support)
     try {
       await setupQRSignaling();
-      console.log('✅ Connected to QR signaling server');
+      logSignaling('✅ Connected to QR signaling server');
 
       // Send answer to sender via QR WebSocket signaling
       if (store.qrSignaling && senderId) {
+        logSignaling(`Sending QR_ANSWER to ${senderId}`);
         store.qrSignaling.send({
           type: 'QR_ANSWER',
           targetId: senderId,
           answer: answer
         } as any);
 
-        console.log('✅ Answer sent to sender via QR signaling');
+        logSignaling('✅ QR_ANSWER sent to sender via QR signaling');
+        logQR('✅ RECEIVER: Answer transmission complete');
 
         qrConnectionStatus.value = {
           type: 'success',
@@ -1515,7 +1541,7 @@ const handleQrScanned = async (qrData: string) => {
           message: 'Verbindung wird aufgebaut...'
         };
       } else {
-        console.error('No QR signaling connection available!');
+        logError('No QR signaling connection available!', 'RECEIVER');
         qrConnectionStatus.value = {
           type: 'error',
           icon: 'mdi:alert-circle',
@@ -1523,7 +1549,7 @@ const handleQrScanned = async (qrData: string) => {
         };
       }
     } catch (err) {
-      console.error('Failed to send answer:', err);
+      logError(err as Error, 'Failed to send answer');
       qrConnectionStatus.value = {
         type: 'error',
         icon: 'mdi:alert-circle',
@@ -1548,8 +1574,12 @@ onMounted(async () => {
     'color: #00ff88; font-weight: bold; font-size: 16px;',
     'color: #888; font-size: 12px;'
   );
+  logApp(`App started - Version ${version}`);
+  logApp(`User Agent: ${navigator.userAgent}`);
+  logApp(`Screen: ${window.screen.width}x${window.screen.height}`);
 
   webCryptoSupported.value = isWebCryptoSupported();
+  logApp(`WebCrypto supported: ${webCryptoSupported.value}`);
 
   // Check for QR-Connect URL parameter
   if (typeof window !== 'undefined') {
