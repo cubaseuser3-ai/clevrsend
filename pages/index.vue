@@ -1202,10 +1202,35 @@ const generateQrSendCode = async () => {
       throw new Error('Client not initialized');
     }
 
-    // Generate WebRTC offer with ICE candidates (include senderId for answer routing)
+    // Connect to QR-specific signaling server (Deno server with QR_ANSWER support)
+    console.log('🔗 Connecting to QR-Connect signaling server...');
+    await setupQRSignaling();
+
+    // Wait for HELLO message to get QR client ID
+    await new Promise<void>((resolve) => {
+      const checkInterval = setInterval(() => {
+        if (store.qrClientId) {
+          clearInterval(checkInterval);
+          resolve();
+        }
+      }, 100);
+      // Timeout after 5 seconds
+      setTimeout(() => {
+        clearInterval(checkInterval);
+        resolve();
+      }, 5000);
+    });
+
+    if (!store.qrClientId) {
+      throw new Error('Failed to get QR client ID from signaling server');
+    }
+
+    console.log('📍 QR-Connect Sender ID:', store.qrClientId);
+
+    // Generate WebRTC offer with ICE candidates (include QR senderId for answer routing)
     const { qrData, peerId, pc, dataChannel } = await generateQRConnectOffer(
       store.client.alias,
-      store.client?.id // Pass signaling server ID
+      store.qrClientId // Pass QR signaling client ID
     );
 
     // Store the URL for display and copying
@@ -1281,31 +1306,29 @@ const generateQrSendCode = async () => {
       message: 'Warte auf Antwort vom Empfänger...'
     };
 
-    // Setup callback for incoming QR_ANSWER via signaling
-    if (store.signaling) {
-      store._onQRAnswer = async (answer: string) => {
-        try {
-          console.log('📨 Received QR_ANSWER from receiver!');
-          console.log('   - Answer data:', answer.substring(0, 100) + '...');
+    // Setup callback for incoming QR_ANSWER via QR signaling (handled in store)
+    store._onQRAnswer = async (answer: string) => {
+      try {
+        console.log('📨 Received QR_ANSWER from receiver!');
+        console.log('   - Answer data:', answer.substring(0, 100) + '...');
 
-          if (qrPeerConnection.value) {
-            // Complete the connection with the answer
-            await completeQRConnection(qrPeerConnection.value, answer);
+        if (qrPeerConnection.value) {
+          // Complete the connection with the answer
+          await completeQRConnection(qrPeerConnection.value, answer);
 
-            console.log('✅ QR-Connect completed with answer!');
+          console.log('✅ QR-Connect completed with answer!');
 
-            qrConnectionStatus.value = {
-              type: 'success',
-              icon: 'mdi:check-circle',
-              message: 'Verbindung wird aufgebaut...'
-            };
-          }
-        } catch (err) {
-          console.error('Error handling QR_ANSWER:', err);
+          qrConnectionStatus.value = {
+            type: 'success',
+            icon: 'mdi:check-circle',
+            message: 'Verbindung wird aufgebaut...'
+          };
         }
-      };
-      console.log('👂 Listening for QR_ANSWER via signaling...');
-    }
+      } catch (err) {
+        console.error('Error handling QR_ANSWER:', err);
+      }
+    };
+    console.log('👂 Listening for QR_ANSWER via QR signaling...');
 
     qrCodeGenerating.value = false;
     // Note: waitingForAnswer is NOT set to true anymore - answer comes automatically via WebSocket!
@@ -1460,46 +1483,50 @@ const handleQrScanned = async (qrData: string) => {
       }
     });
 
-    // Instead of showing QR code, send answer directly via signaling server
+    // Connect to QR signaling server and send answer
     qrConnectionStatus.value = {
       type: 'info',
       icon: 'mdi:loading',
       message: 'Sende Antwort an Sender...'
     };
 
-    console.log('📤 Sending answer via signaling server to sender:', peerAlias);
+    console.log('📤 Connecting to QR signaling and sending answer to sender:', peerAlias);
     console.log('   - senderId:', senderId);
 
-    // Send answer to sender via WebSocket signaling
-    if (store.signaling && senderId) {
-      try {
-        store.signaling.send(JSON.stringify({
-          type: 'QR_ANSWER',
-          targetId: senderId, // Use senderId instead of peerId
-          answer: answer
-        }));
+    // Connect to QR signaling server (Deno server with QR_ANSWER support)
+    try {
+      await setupQRSignaling();
+      console.log('✅ Connected to QR signaling server');
 
-        console.log('✅ Answer sent to sender');
+      // Send answer to sender via QR WebSocket signaling
+      if (store.qrSignaling && senderId) {
+        store.qrSignaling.send({
+          type: 'QR_ANSWER',
+          targetId: senderId,
+          answer: answer
+        } as any);
+
+        console.log('✅ Answer sent to sender via QR signaling');
 
         qrConnectionStatus.value = {
           type: 'success',
           icon: 'mdi:check-circle',
           message: 'Verbindung wird aufgebaut...'
         };
-      } catch (err) {
-        console.error('Failed to send answer:', err);
+      } else {
+        console.error('No QR signaling connection available!');
         qrConnectionStatus.value = {
           type: 'error',
           icon: 'mdi:alert-circle',
-          message: 'Fehler beim Senden der Antwort'
+          message: 'Keine QR-Signaling-Verbindung'
         };
       }
-    } else {
-      console.error('No signaling connection available!');
+    } catch (err) {
+      console.error('Failed to send answer:', err);
       qrConnectionStatus.value = {
         type: 'error',
         icon: 'mdi:alert-circle',
-        message: 'Keine Signaling-Verbindung'
+        message: 'Fehler beim Senden der Antwort'
       };
     }
 

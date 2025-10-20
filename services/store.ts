@@ -47,8 +47,14 @@ export const store = reactive({
   /// PIN code used before receiving or sending files
   pin: null as string | null,
 
-  // Signaling connection to the server
+  // Signaling connection to the server (LocalSend for normal peer discovery)
   signaling: null as SignalingConnection | null,
+
+  // Separate signaling connection for QR-Connect (Deno server for QR_ANSWER support)
+  qrSignaling: null as SignalingConnection | null,
+
+  // Client ID from QR signaling server (for answer routing)
+  qrClientId: null as string | null,
 
   // Client information of the current user that we received from the server
   client: null as ClientInfo | null,
@@ -299,5 +305,72 @@ function onFileProgress(progress: FileProgress) {
   } else if (progress.error) {
     store.session.fileState[progress.id].state = "error";
     store.session.fileState[progress.id].error = progress.error;
+  }
+}
+
+/**
+ * Setup QR-Connect signaling connection to Deno server
+ * This is separate from the main signaling connection to support QR_ANSWER messages
+ */
+export async function setupQRSignaling(): Promise<SignalingConnection> {
+  if (store.qrSignaling) {
+    return store.qrSignaling;
+  }
+
+  if (!store.key || !store._proposingClient) {
+    throw new Error("Store not initialized - call setupConnection first");
+  }
+
+  const qrSignalingUrl = "wss://clevrsend-signaling.mytechsupport.deno.net";
+
+  console.log(`🔗 QR-Connect: Connecting to dedicated signaling server: ${qrSignalingUrl}`);
+
+  try {
+    store.qrSignaling = await SignalingConnection.connect({
+      url: qrSignalingUrl,
+      info: store._proposingClient,
+      onMessage: (data: WsServerMessage) => {
+        switch (data.type) {
+          case "HELLO":
+            // Store QR client ID for answer routing
+            store.qrClientId = data.client.id;
+            console.log(`✅ QR-Connect: Connected to ${qrSignalingUrl}`);
+            console.log(`   - QR Client ID: ${data.client.id}`);
+            break;
+          case "QR_ANSWER":
+            // Handle QR-Connect answer from receiver
+            if (store._onQRAnswer && (data as any).answer) {
+              console.log('📨 QR-Connect Store: Received QR_ANSWER, calling callback');
+              store._onQRAnswer((data as any).answer);
+              store._onQRAnswer = null;
+            }
+            break;
+          default:
+            // Ignore other message types for QR signaling
+            break;
+        }
+      },
+      generateNewInfo: async () => {
+        const token = await generateClientTokenFromCurrentTimestamp(
+          store.key!,
+        );
+        return {
+          alias: store._proposingClient!.alias,
+          version: store._proposingClient!.version,
+          deviceModel: store._proposingClient!.deviceModel,
+          deviceType: store._proposingClient!.deviceType,
+          token,
+        };
+      },
+      onClose: () => {
+        console.log("QR-Connect signaling connection closed");
+        store.qrSignaling = null;
+      },
+    });
+
+    return store.qrSignaling;
+  } catch (error) {
+    console.error("Failed to connect to QR signaling server:", error);
+    throw error;
   }
 }
