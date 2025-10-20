@@ -620,6 +620,10 @@
         <span class="version-label">Backend:</span>
         <span class="version-value">v{{ backendVersion }}</span>
       </div>
+      <div class="version-mismatch-warning" v-if="versionMismatch">
+        <Icon name="mdi:alert" size="14" />
+        <span>Version-Konflikt erkannt!</span>
+      </div>
     </div>
   </div>
 </template>
@@ -701,6 +705,7 @@ const activeMode = ref<'auto' | 'qr'>('auto');
 // App version (dynamically imported from package.json)
 const appVersion = ref('...');
 const backendVersion = ref<string | null>(null);
+const versionMismatch = ref(false);
 
 // QR-Connect state
 const showQrSendCode = ref(false);
@@ -1585,6 +1590,17 @@ onMounted(async () => {
     if (data.version) {
       backendVersion.value = data.version;
       logApp(`Backend Version: ${data.version}`);
+
+      // Check for version mismatch
+      if (version !== data.version) {
+        versionMismatch.value = true;
+        logError(`Version-Konflikt: Frontend v${version} ≠ Backend v${data.version}`, 'VERSION_CHECK');
+        console.warn(`⚠️ Version-Konflikt erkannt!`);
+        console.warn(`   Frontend: v${version}`);
+        console.warn(`   Backend:  v${data.version}`);
+      } else {
+        logApp(`✅ Version-Check erfolgreich: v${version}`);
+      }
     }
   } catch (error) {
     console.warn('Could not fetch backend version:', error);
@@ -1950,6 +1966,20 @@ onMounted(async () => {
 
 .version-value {
   font-weight: 600;
+}
+
+.version-mismatch-warning {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  color: #ff9800;
+  font-weight: 600;
+  margin-top: 0.5rem;
+  padding: 0.5rem;
+  background: rgba(255, 152, 0, 0.1);
+  border: 1px solid rgba(255, 152, 0, 0.3);
+  border-radius: 0.5rem;
 }
 
 /* Fade Transition */
