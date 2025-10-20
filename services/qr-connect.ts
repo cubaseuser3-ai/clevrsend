@@ -10,6 +10,7 @@ export interface QRConnectOffer {
   version: string;
   peerId: string;
   peerAlias: string;
+  senderId: string; // Signaling server ID of sender for answer routing
   offer: RTCSessionDescriptionInit;
   timestamp: number;
 }
@@ -24,7 +25,8 @@ export interface QRConnectAnswer {
  * Generate WebRTC offer for QR code
  */
 export async function generateQRConnectOffer(
-  alias: string
+  alias: string,
+  senderId?: string
 ): Promise<{ qrData: string; peerId: string; pc: RTCPeerConnection; dataChannel: RTCDataChannel }> {
 
   // Create unique peer ID
@@ -136,6 +138,7 @@ export async function generateQRConnectOffer(
     version: '1.0',
     peerId,
     peerAlias: alias,
+    senderId: senderId || '', // Signaling server ID for answer routing
     offer: pc.localDescription!.toJSON(),
     timestamp: Date.now()
   };
@@ -161,7 +164,7 @@ export async function generateQRConnectOffer(
 export async function processQRConnectOffer(
   qrData: string,
   localAlias: string
-): Promise<{ peerId: string; peerAlias: string; pc: RTCPeerConnection; answer: string }> {
+): Promise<{ peerId: string; peerAlias: string; senderId: string; pc: RTCPeerConnection; answer: string }> {
 
   // Parse QR data - could be URL or direct JSON
   let offerData: QRConnectOffer;
@@ -289,6 +292,7 @@ export async function processQRConnectOffer(
   return {
     peerId: offerData.peerId,
     peerAlias: offerData.peerAlias,
+    senderId: offerData.senderId, // Return senderId for answer routing
     pc,
     answer: answerString
   };

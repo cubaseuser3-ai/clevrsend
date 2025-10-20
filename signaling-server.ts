@@ -198,6 +198,21 @@ function handleMessage(senderId: string, message: any, sender: Client) {
       }
       break;
 
+    case "QR_ANSWER":
+      // Forward QR_ANSWER to target peer (for QR-Connect one-way handshake)
+      const qrTarget = clients.get(message.targetId);
+      if (qrTarget && qrTarget.socket.readyState === WebSocket.OPEN) {
+        qrTarget.socket.send(JSON.stringify({
+          type: "QR_ANSWER",
+          answer: message.answer,
+          senderId: senderId,
+        }));
+        console.log(`Forwarded QR_ANSWER from ${senderId} to ${message.targetId}`);
+      } else {
+        console.warn(`QR_ANSWER target ${message.targetId} not found or not ready`);
+      }
+      break;
+
     default:
       console.warn(`Unknown message type: ${message.type}`);
   }
