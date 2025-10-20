@@ -1291,19 +1291,16 @@ const generateQrSendCode = async () => {
       message: 'Warte auf Antwort vom Empfänger...'
     };
 
-    // Setup listener for incoming QR_ANSWER via signaling
+    // Setup callback for incoming QR_ANSWER via signaling
     if (store.signaling) {
-      const handleMessage = async (event: MessageEvent) => {
+      store._onQRAnswer = async (answer: string) => {
         try {
-          const data = JSON.parse(event.data);
-          console.log('📨 WS Message received:', data.type);
+          console.log('📨 Received QR_ANSWER from receiver!');
+          console.log('   - Answer data:', answer.substring(0, 100) + '...');
 
-          if (data.type === 'QR_ANSWER' && qrPeerConnection.value) {
-            console.log('📨 Received QR_ANSWER from receiver!');
-            console.log('   - Answer data:', data.answer.substring(0, 100) + '...');
-
+          if (qrPeerConnection.value) {
             // Complete the connection with the answer
-            await completeQRConnection(qrPeerConnection.value, data.answer);
+            await completeQRConnection(qrPeerConnection.value, answer);
 
             console.log('✅ QR-Connect completed with answer!');
 
@@ -1312,16 +1309,11 @@ const generateQrSendCode = async () => {
               icon: 'mdi:check-circle',
               message: 'Verbindung wird aufgebaut...'
             };
-
-            // Remove listener after receiving answer
-            store.signaling?.removeEventListener('message', handleMessage);
           }
         } catch (err) {
-          console.error('Error handling WS message:', err);
+          console.error('Error handling QR_ANSWER:', err);
         }
       };
-
-      store.signaling.addEventListener('message', handleMessage);
       console.log('👂 Listening for QR_ANSWER via signaling...');
     }
 

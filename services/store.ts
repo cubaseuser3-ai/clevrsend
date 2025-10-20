@@ -38,6 +38,9 @@ export const store = reactive({
 
   _onPin: null as (() => Promise<string | null>) | null,
 
+  // Callback for QR-Connect answer messages
+  _onQRAnswer: null as ((answer: string) => void) | null,
+
   // Public and private key pair for signing and verifying messages
   key: null as CryptoKeyPair | null,
 
@@ -117,6 +120,14 @@ async function connectionLoop() {
               acceptOffer({ offer: data, onPin: store._onPin! });
               break;
             case "ANSWER":
+              break;
+            case "QR_ANSWER":
+              // Handle QR-Connect answer from receiver
+              if (store._onQRAnswer && (data as any).answer) {
+                console.log('📨 Store: Received QR_ANSWER, calling callback');
+                store._onQRAnswer((data as any).answer);
+                store._onQRAnswer = null; // Clear callback after use
+              }
               break;
           }
         },
