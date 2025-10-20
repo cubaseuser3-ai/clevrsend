@@ -691,6 +691,7 @@ import {
   startSendSession,
   store,
   updateAliasState,
+  SessionState,
 } from "@/services/store";
 import { PeerDeviceType } from "@/services/signaling";
 import { getAgentInfoString } from "~/utils/userAgent";
