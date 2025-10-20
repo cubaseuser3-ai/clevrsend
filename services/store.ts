@@ -78,16 +78,29 @@ export async function setupConnection({
 }
 
 async function connectionLoop() {
+  // Signaling servers (primary + fallback)
+  const signalingServers = [
+    "wss://public.localsend.org/v1/ws", // Primary: Official LocalSend server
+    "wss://clevrsend-signaling.mytechsupport.deno.net", // Fallback: Deno Deploy signaling server
+  ];
+
+  let currentServerIndex = 0;
+
   while (true) {
     try {
+      const currentUrl = signalingServers[currentServerIndex];
+      console.log(`Connecting to signaling server: ${currentUrl}`);
+
       store.signaling = await SignalingConnection.connect({
-        url: "wss://public.localsend.org/v1/ws",
+        url: currentUrl,
         info: store._proposingClient!,
         onMessage: (data: WsServerMessage) => {
           switch (data.type) {
             case "HELLO":
               store.client = data.client;
               store.peers = data.peers;
+              console.log(`Connected successfully to ${currentUrl}`);
+              currentServerIndex = 0; // Reset to primary on successful connection
               break;
             case "JOIN":
               store.peers = [...store.peers, data.peer];
@@ -123,8 +136,19 @@ async function connectionLoop() {
 
       await store.signaling.waitUntilClose();
     } catch (error) {
-      console.log("Retrying connection in 5 seconds...");
-      await new Promise((resolve) => setTimeout(resolve, 5000)); // Wait before retrying
+      console.error(`Connection failed to ${signalingServers[currentServerIndex]}:`, error);
+
+      // Try fallback server
+      currentServerIndex = (currentServerIndex + 1) % signalingServers.length;
+
+      if (currentServerIndex === 0) {
+        // Tried all servers, wait before retrying
+        console.log("All signaling servers failed. Retrying in 5 seconds...");
+        await new Promise((resolve) => setTimeout(resolve, 5000));
+      } else {
+        // Immediately try next server
+        console.log(`Trying fallback server: ${signalingServers[currentServerIndex]}`);
+      }
     }
   }
 }

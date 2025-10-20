@@ -7,7 +7,7 @@ const localeHead = useLocaleHead({
   addSeoAttributes: true,
 });
 const title = computed(() =>
-  route.meta.title ? t(route.meta.title) : "LocalSend",
+  route.meta.title ? t(route.meta.title) : "ClevrSend",
 );
 const description = computed(() =>
   route.meta.description ? t(route.meta.description) : null,
@@ -16,7 +16,7 @@ const description = computed(() =>
 
 <template>
   <div>
-    <Html :lang="localeHead.htmlAttrs.lang" :dir="localeHead.htmlAttrs.dir">
+    <Html :lang="localeHead.htmlAttrs.lang" :dir="localeHead.htmlAttrs.dir" class="dark">
       <Head>
         <Title>{{ title }}</Title>
         <Meta v-if="description" name="description" :content="description" />
@@ -36,7 +36,7 @@ const description = computed(() =>
           />
         </template>
       </Head>
-      <Body class="dark:bg-gray-900 bg-gray-200">
+      <Body class="bg-gray-900 text-white dark">
         <slot />
       </Body>
     </Html>

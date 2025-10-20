@@ -14,7 +14,7 @@
     "you": "Du bist:",
     "pin": {
       "label": "PIN: ",
-      "none": "keine"
+      "none": "kein"
     },
     "enterAlias": "Name eingeben",
     "enterPin": "PIN eingeben",
