@@ -659,6 +659,20 @@
         <span>Version-Konflikt erkannt!</span>
       </div>
     </div>
+
+    <!-- Toast Notifications -->
+    <div class="toast-container">
+      <transition-group name="toast">
+        <div
+          v-for="notification in notifications"
+          :key="notification.id"
+          :class="['toast', `toast-${notification.type}`]"
+        >
+          <Icon :name="notification.icon" size="20" />
+          <span>{{ notification.message }}</span>
+        </div>
+      </transition-group>
+    </div>
   </div>
 </template>
 
@@ -792,6 +806,40 @@ const showCustomPinDialog = (title: string = 'PIN eingeben'): Promise<string | n
   });
 };
 
+// Toast notification system
+interface Notification {
+  id: number;
+  type: 'success' | 'error' | 'info' | 'warning';
+  icon: string;
+  message: string;
+}
+
+const notifications = ref<Notification[]>([]);
+let notificationIdCounter = 0;
+
+const showNotification = (message: string, type: 'success' | 'error' | 'info' | 'warning' = 'info') => {
+  const iconMap = {
+    success: 'mdi:check-circle',
+    error: 'mdi:alert-circle',
+    info: 'mdi:information',
+    warning: 'mdi:alert',
+  };
+
+  const notification: Notification = {
+    id: notificationIdCounter++,
+    type,
+    icon: iconMap[type],
+    message,
+  };
+
+  notifications.value.push(notification);
+
+  // Auto-remove after 3 seconds
+  setTimeout(() => {
+    notifications.value = notifications.value.filter(n => n.id !== notification.id);
+  }, 3000);
+};
+
 const submitPinDialog = () => {
   if (pinDialogResolve.value) {
     pinDialogResolve.value(pinDialogInput.value || null);
@@ -897,10 +945,10 @@ const resetDesignSettings = () => {
 const copyToClipboard = async () => {
   try {
     await navigator.clipboard.writeText(shareUrl.value);
-    alert('Link wurde in die Zwischenablage kopiert!');
+    showNotification('Link wurde in die Zwischenablage kopiert!', 'success');
   } catch (err) {
     console.error('Failed to copy:', err);
-    alert('Fehler beim Kopieren des Links');
+    showNotification('Fehler beim Kopieren des Links', 'error');
   }
 };
 
@@ -1194,7 +1242,7 @@ const bentoItems = computed(() => {
 
 // Handle click on own card
 const handleOwnCardClick = () => {
-  alert('Du kannst dir nicht selbst Dateien schicken!');
+  showNotification('Du kannst dir nicht selbst Dateien schicken!', 'warning');
 };
 
 onChange(async (files) => {
@@ -1227,14 +1275,56 @@ const selectPeer = (id: string) => {
 const setupQRFileReceiver = (dataChannel: RTCDataChannel) => {
   logFile('Setting up QR File Receiver...');
 
+  let receivingFiles = false;
+
   qrFileReceiver.value = new QRFileReceiver({
     onProgress: (fileId: string, bytesReceived: number, totalBytes: number) => {
       const percentage = Math.round((bytesReceived / totalBytes) * 100);
       logFile(`Receiving file ${fileId}: ${percentage}%`);
-      // TODO: Update UI with progress
+
+      // Initialize session state on first progress
+      if (!receivingFiles) {
+        receivingFiles = true;
+        store.session.state = SessionState.receiving;
+        store.session.curr = 0;
+        store.session.total = 0; // Will be updated as files come in
+        store.session.fileState = {};
+      }
+
+      // Update or create file state
+      if (!store.session.fileState[fileId]) {
+        store.session.fileState[fileId] = {
+          id: fileId,
+          name: `File ${fileId}`, // Will be updated with real name
+          curr: 0,
+          total: totalBytes,
+          state: 'pending',
+        };
+        store.session.total += totalBytes;
+      }
+
+      // Update progress
+      const fileState = store.session.fileState[fileId];
+      if (fileState) {
+        fileState.curr = bytesReceived;
+        fileState.state = 'sending';
+
+        // Update total progress
+        store.session.curr = Object.values(store.session.fileState)
+          .reduce((acc, file) => acc + file.curr, 0);
+      }
     },
     onFileComplete: (fileId: string, fileName: string, blob: Blob) => {
       logFile(`✅ File received: ${fileName}`);
+
+      // Update file state with real name
+      const fileState = store.session.fileState[fileId];
+      if (fileState) {
+        fileState.name = fileName;
+        fileState.state = 'finished';
+        fileState.curr = fileState.total;
+      }
+
       // Auto-download the file
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -1247,11 +1337,36 @@ const setupQRFileReceiver = (dataChannel: RTCDataChannel) => {
     },
     onAllComplete: () => {
       logFile('✅ All files received!');
-      alert('Alle Dateien erfolgreich empfangen!');
+
+      // Mark all files as finished
+      Object.values(store.session.fileState).forEach(file => {
+        file.state = 'finished';
+        file.curr = file.total;
+      });
+      store.session.curr = store.session.total;
+
+      // Close dialog after 1 second
+      setTimeout(() => {
+        store.session.state = SessionState.idle;
+        receivingFiles = false;
+      }, 1000);
     },
     onError: (error: Error) => {
       logError(error, 'QR_FILE_RECEIVE');
-      alert(`Fehler beim Empfangen: ${error.message}`);
+
+      // Mark current file as error
+      Object.values(store.session.fileState).forEach(file => {
+        if (file.state === 'sending') {
+          file.state = 'error';
+          file.error = error.message;
+        }
+      });
+
+      // Close dialog after 2 seconds
+      setTimeout(() => {
+        store.session.state = SessionState.idle;
+        receivingFiles = false;
+      }, 2000);
     },
   });
 
@@ -1284,9 +1399,26 @@ const openQrFileDialog = async () => {
 
     if (!qrDataChannel.value || qrDataChannel.value.readyState !== 'open') {
       logError('QR DataChannel is not open!', 'QR_FILE_UPLOAD');
-      alert('QR-Verbindung ist nicht bereit. Bitte erneut verbinden.');
+      showNotification('QR-Verbindung ist nicht bereit. Bitte erneut verbinden.', 'error');
       return;
     }
+
+    // Initialize session state
+    store.session.state = SessionState.sending;
+    store.session.curr = 0;
+    store.session.total = Array.from(files).reduce((acc, file) => acc + file.size, 0);
+    store.session.fileState = {};
+
+    // Create file state for each file
+    Array.from(files).forEach((file, index) => {
+      store.session.fileState[index.toString()] = {
+        id: index.toString(),
+        name: file.name,
+        curr: 0,
+        total: file.size,
+        state: 'pending',
+      };
+    });
 
     try {
       await sendFilesViaQRConnect({
@@ -1294,19 +1426,53 @@ const openQrFileDialog = async () => {
         files,
         onProgress: (progress: QRFileTransferProgress) => {
           logFile(`Progress: ${progress.fileName} - ${progress.percentage}%`);
-          // TODO: Update UI with progress
+
+          // Update file state
+          const fileState = store.session.fileState[progress.fileId];
+          if (fileState) {
+            fileState.curr = progress.bytesTransferred;
+            fileState.state = 'sending';
+
+            // Update total progress
+            store.session.curr = Object.values(store.session.fileState)
+              .reduce((acc, file) => acc + file.curr, 0);
+          }
         },
         onComplete: () => {
           logFile('✅ All files transferred successfully!');
-          alert('Alle Dateien erfolgreich gesendet!');
+
+          // Mark all files as finished
+          Object.values(store.session.fileState).forEach(file => {
+            file.state = 'finished';
+            file.curr = file.total;
+          });
+          store.session.curr = store.session.total;
+
+          // Close dialog after 1 second
+          setTimeout(() => {
+            store.session.state = SessionState.idle;
+          }, 1000);
         },
         onError: (error: Error) => {
           logError(error, 'QR_FILE_TRANSFER');
-          alert(`Fehler beim Senden: ${error.message}`);
+
+          // Mark current file as error
+          Object.values(store.session.fileState).forEach(file => {
+            if (file.state === 'sending') {
+              file.state = 'error';
+              file.error = error.message;
+            }
+          });
+
+          // Close dialog after 2 seconds
+          setTimeout(() => {
+            store.session.state = SessionState.idle;
+          }, 2000);
         },
       });
     } catch (error) {
       logError(error as Error, 'QR_FILE_UPLOAD');
+      store.session.state = SessionState.idle;
     }
   };
 
@@ -3297,6 +3463,78 @@ onMounted(async () => {
 
   .qr-code-display {
     padding: 1rem;
+  }
+}
+
+/* Toast Notifications */
+.toast-container {
+  position: fixed;
+  top: 5rem;
+  right: 1rem;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  pointer-events: none;
+}
+
+.toast {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem 1.25rem;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(10px);
+  border-radius: 0.75rem;
+  color: white;
+  font-weight: 500;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  pointer-events: auto;
+  min-width: 250px;
+  max-width: 400px;
+}
+
+.toast-success {
+  border-left: 4px solid #10b981;
+}
+
+.toast-error {
+  border-left: 4px solid #ef4444;
+}
+
+.toast-info {
+  border-left: 4px solid #3b82f6;
+}
+
+.toast-warning {
+  border-left: 4px solid #f59e0b;
+}
+
+/* Toast animations */
+.toast-enter-active,
+.toast-leave-active {
+  transition: all 0.3s ease;
+}
+
+.toast-enter-from {
+  opacity: 0;
+  transform: translateX(100%);
+}
+
+.toast-leave-to {
+  opacity: 0;
+  transform: translateX(100%);
+}
+
+@media (max-width: 768px) {
+  .toast-container {
+    right: 0.5rem;
+    left: 0.5rem;
+  }
+
+  .toast {
+    min-width: auto;
+    max-width: none;
   }
 }
 </style>
