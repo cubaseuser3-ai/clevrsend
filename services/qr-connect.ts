@@ -77,9 +77,14 @@ export async function generateQRConnectOffer(
   });
 
   // Create data channel for file transfer
+  console.log('🔧 SENDER: Creating data channel...');
   const dataChannel = pc.createDataChannel('files', {
     ordered: true
   });
+  console.log('🔧 SENDER: Data channel created!');
+  console.log('   - label:', dataChannel.label);
+  console.log('   - readyState:', dataChannel.readyState);
+  console.log('   - id:', dataChannel.id);
 
   // Setup data channel event listeners
   dataChannel.addEventListener('open', () => {
@@ -402,11 +407,15 @@ export function setupQRConnectionListeners(
     }
   });
 
+  // Listen for data channel from remote peer
+  console.log('🔧 RECEIVER: Setting up datachannel listener...');
   pc.addEventListener('datachannel', (event) => {
     console.log('📡 QR-Connect RECEIVER: Data channel received!');
     console.log('   - label:', event.channel.label);
     console.log('   - readyState:', event.channel.readyState);
     console.log('   - id:', event.channel.id);
+    console.log('   - Peer connection state:', pc.connectionState);
+    console.log('   - ICE connection state:', pc.iceConnectionState);
 
     // Setup event listeners for the received channel
     event.channel.addEventListener('open', () => {
@@ -429,6 +438,7 @@ export function setupQRConnectionListeners(
 
     callbacks.onDataChannel?.(event.channel);
   });
+  console.log('🔧 RECEIVER: Datachannel listener set up!');
 
   // Additional error handling for ICE failures
   const originalIceListener = pc.oniceconnectionstatechange;
