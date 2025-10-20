@@ -59,6 +59,23 @@ export async function generateQRConnectOffer(
     iceCandidatePoolSize: 10
   });
 
+  // Setup ICE candidate logging immediately
+  pc.addEventListener('icecandidate', (event) => {
+    if (event.candidate) {
+      console.log('🧊 SENDER ICE Candidate:', event.candidate.type, event.candidate.protocol, event.candidate.address || 'hidden');
+    } else {
+      console.log('🧊 SENDER ICE Gathering complete');
+    }
+  });
+
+  pc.addEventListener('icegatheringstatechange', () => {
+    console.log('🧊 SENDER ICE gathering state:', pc.iceGatheringState);
+  });
+
+  pc.addEventListener('iceconnectionstatechange', () => {
+    console.log('🧊 SENDER ICE connection state:', pc.iceConnectionState);
+  });
+
   // Create data channel for file transfer
   const dataChannel = pc.createDataChannel('files', {
     ordered: true
@@ -199,6 +216,23 @@ export async function processQRConnectOffer(
       }
     ],
     iceCandidatePoolSize: 10
+  });
+
+  // Setup ICE candidate logging immediately
+  pc.addEventListener('icecandidate', (event) => {
+    if (event.candidate) {
+      console.log('🧊 RECEIVER ICE Candidate:', event.candidate.type, event.candidate.protocol, event.candidate.address || 'hidden');
+    } else {
+      console.log('🧊 RECEIVER ICE Gathering complete');
+    }
+  });
+
+  pc.addEventListener('icegatheringstatechange', () => {
+    console.log('🧊 RECEIVER ICE gathering state:', pc.iceGatheringState);
+  });
+
+  pc.addEventListener('iceconnectionstatechange', () => {
+    console.log('🧊 RECEIVER ICE connection state:', pc.iceConnectionState);
   });
 
   // Set remote description from QR code
@@ -396,9 +430,9 @@ export function setupQRConnectionListeners(
     callbacks.onDataChannel?.(event.channel);
   });
 
+  // Additional error handling for ICE failures
+  const originalIceListener = pc.oniceconnectionstatechange;
   pc.addEventListener('iceconnectionstatechange', () => {
-    console.log('🧊 QR-Connect: ICE connection state:', pc.iceConnectionState);
-
     if (pc.iceConnectionState === 'failed') {
       console.error('❌ ICE Connection FAILED - NAT traversal problem!');
       callbacks.onError?.(new Error('ICE connection failed'));
@@ -406,18 +440,6 @@ export function setupQRConnectionListeners(
       console.log('✅ ICE Connection SUCCESSFUL!');
     } else if (pc.iceConnectionState === 'disconnected') {
       console.log('⚠️ ICE Connection DISCONNECTED');
-    }
-  });
-
-  pc.addEventListener('icegatheringstatechange', () => {
-    console.log('🧊 QR-Connect: ICE gathering state:', pc.iceGatheringState);
-  });
-
-  pc.addEventListener('icecandidate', (event) => {
-    if (event.candidate) {
-      console.log('🧊 ICE Candidate:', event.candidate.type, event.candidate.protocol, event.candidate.address);
-    } else {
-      console.log('🧊 ICE Gathering complete');
     }
   });
 }

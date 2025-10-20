@@ -622,7 +622,7 @@
 
     <!-- Version Number -->
     <div class="version-number">
-      v1.0.38
+      v1.0.39
     </div>
   </div>
 </template>
