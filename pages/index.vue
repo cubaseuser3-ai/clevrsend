@@ -619,16 +619,41 @@
       @scanned="handleQrScanned"
     />
 
-    <!-- Version Numbers -->
+    <!-- Version & Status Info -->
     <div class="version-info">
-      <div class="version-item">
-        <span class="version-label">Frontend:</span>
-        <span class="version-value">v{{ appVersion }}</span>
+      <!-- Frontend Status -->
+      <div class="status-row">
+        <div class="status-indicator-small success">
+          <Icon name="mdi:check-circle" size="12" />
+        </div>
+        <div class="status-details">
+          <div class="version-item">
+            <span class="version-label">Frontend:</span>
+            <span class="version-value">v{{ appVersion }}</span>
+          </div>
+          <div class="status-time" v-if="frontendStartTime">
+            Ready seit {{ frontendStartTime }}
+          </div>
+        </div>
       </div>
-      <div class="version-item" v-if="backendVersion">
-        <span class="version-label">Backend:</span>
-        <span class="version-value">v{{ backendVersion }}</span>
+
+      <!-- Backend Status -->
+      <div class="status-row" v-if="backendVersion">
+        <div class="status-indicator-small success">
+          <Icon name="mdi:check-circle" size="12" />
+        </div>
+        <div class="status-details">
+          <div class="version-item">
+            <span class="version-label">Backend:</span>
+            <span class="version-value">v{{ backendVersion }}</span>
+          </div>
+          <div class="status-time" v-if="backendUptime">
+            Ready seit {{ backendUptime }}
+          </div>
+        </div>
       </div>
+
+      <!-- Version Mismatch Warning -->
       <div class="version-mismatch-warning" v-if="versionMismatch">
         <Icon name="mdi:alert" size="14" />
         <span>Version-Konflikt erkannt!</span>
@@ -715,6 +740,8 @@ const activeMode = ref<'auto' | 'qr'>('auto');
 const appVersion = ref('...');
 const backendVersion = ref<string | null>(null);
 const versionMismatch = ref(false);
+const frontendStartTime = ref<string>('');
+const backendUptime = ref<string>('');
 
 // QR-Connect state
 const showQrSendCode = ref(false);
@@ -1591,11 +1618,23 @@ onMounted(async () => {
   const { version } = await import('~/package.json');
   appVersion.value = version; // Set version for UI display
 
+  // Set frontend start time
+  const now = new Date();
+  frontendStartTime.value = now.toLocaleString('de-DE', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit'
+  });
+
   console.log(`%c🚀 ClevrSend v${version} %c- powered by MyTech`,
     'color: #00ff88; font-weight: bold; font-size: 16px;',
     'color: #888; font-size: 12px;'
   );
   logApp(`App started - Version ${version}`);
+  logApp(`Frontend ready at: ${frontendStartTime.value}`);
   logApp(`User Agent: ${navigator.userAgent}`);
   logApp(`Screen: ${window.screen.width}x${window.screen.height}`);
 
@@ -1609,6 +1648,21 @@ onMounted(async () => {
     if (data.version) {
       backendVersion.value = data.version;
       logApp(`Backend Version: ${data.version}`);
+
+      // Calculate backend uptime (uptime is in milliseconds from performance.now())
+      if (data.uptime) {
+        const uptimeMs = data.uptime;
+        const backendStartTime = new Date(Date.now() - uptimeMs);
+        backendUptime.value = backendStartTime.toLocaleString('de-DE', {
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit'
+        });
+        logApp(`Backend ready at: ${backendUptime.value}`);
+      }
 
       // Check for version mismatch
       if (version !== data.version) {
@@ -1985,6 +2039,39 @@ onMounted(async () => {
 
 .version-value {
   font-weight: 600;
+}
+
+.status-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.status-indicator-small {
+  margin-top: 0.15rem;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.status-indicator-small.success {
+  color: rgb(74, 222, 128);
+}
+
+.status-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.status-time {
+  font-size: 0.65rem;
+  color: rgba(255, 255, 255, 0.4);
+  font-weight: 400;
 }
 
 .version-mismatch-warning {
