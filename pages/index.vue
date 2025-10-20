@@ -76,6 +76,14 @@
           <span>QR-Connect</span>
         </button>
       </div>
+
+      <!-- Retry Status Indicator -->
+      <div v-if="store.retryStatus.isRetrying" class="retry-status-bar">
+        <div class="retry-status-content">
+          <Icon name="mdi:refresh" size="18" class="retry-icon-spin" />
+          <span>{{ store.retryStatus.message }}</span>
+        </div>
+      </div>
     </div>
 
     <!-- Animation Settings Panel -->
@@ -3581,6 +3589,41 @@ onMounted(async () => {
   .toast {
     min-width: auto;
     max-width: none;
+  }
+}
+
+/* Retry Status Bar */
+.retry-status-bar {
+  margin-top: 1rem;
+  padding: 0.75rem 1rem;
+  background: rgba(59, 130, 246, 0.15);
+  border-left: 4px solid #3b82f6;
+  border-radius: 0.5rem;
+  backdrop-filter: blur(10px);
+  animation: slideDown 0.3s ease;
+}
+
+.retry-status-content {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: rgb(147, 197, 253);
+  font-weight: 500;
+  font-size: 0.95rem;
+}
+
+.retry-icon-spin {
+  animation: spin 1.5s linear infinite;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 </style>

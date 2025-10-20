@@ -69,6 +69,15 @@ export const store = reactive({
     total: 1, // Avoid division by zero
     fileState: {} as Record<string, FileState>,
   },
+
+  // Retry status for UI feedback
+  retryStatus: {
+    isRetrying: false,
+    type: null as 'signaling' | 'qr-signaling' | 'webrtc' | 'file-transfer' | null,
+    attempt: 0,
+    maxAttempts: 0,
+    message: '',
+  },
 });
 
 export async function setupConnection({
@@ -156,15 +165,36 @@ async function connectionLoop() {
       console.error(`Connection failed to ${signalingServers[currentServerIndex]}:`, error);
 
       // Try fallback server
+      const previousIndex = currentServerIndex;
       currentServerIndex = (currentServerIndex + 1) % signalingServers.length;
 
       if (currentServerIndex === 0) {
         // Tried all servers, wait before retrying
         console.log("All signaling servers failed. Retrying in 5 seconds...");
+
+        store.retryStatus.isRetrying = true;
+        store.retryStatus.type = 'signaling';
+        store.retryStatus.attempt = 1;
+        store.retryStatus.maxAttempts = signalingServers.length;
+        store.retryStatus.message = 'Signaling-Server nicht erreichbar. Wiederhole in 5s...';
+
         await new Promise((resolve) => setTimeout(resolve, 5000));
+
+        store.retryStatus.isRetrying = false;
+        store.retryStatus.type = null;
+        store.retryStatus.message = '';
       } else {
         // Immediately try next server
         console.log(`Trying fallback server: ${signalingServers[currentServerIndex]}`);
+
+        store.retryStatus.isRetrying = true;
+        store.retryStatus.type = 'signaling';
+        store.retryStatus.attempt = currentServerIndex + 1;
+        store.retryStatus.maxAttempts = signalingServers.length;
+        store.retryStatus.message = `Versuche Fallback-Server...`;
+
+        // Give UI a moment to show the retry message
+        await new Promise((resolve) => setTimeout(resolve, 500));
       }
     }
   }
@@ -309,8 +339,9 @@ function onFileProgress(progress: FileProgress) {
 }
 
 /**
- * Setup QR-Connect signaling connection to Deno server
+ * Setup QR-Connect signaling connection to Render.com server
  * This is separate from the main signaling connection to support QR_ANSWER messages
+ * Includes automatic retry with exponential backoff
  */
 export async function setupQRSignaling(): Promise<SignalingConnection> {
   if (store.qrSignaling && store.qrClientId) {
@@ -322,66 +353,101 @@ export async function setupQRSignaling(): Promise<SignalingConnection> {
   }
 
   const qrSignalingUrl = "wss://clevrsend-signaling.onrender.com";
+  const maxRetries = 3;
+  let lastError: Error;
 
-  console.log(`🔗 QR-Connect: Connecting to dedicated signaling server: ${qrSignalingUrl}`);
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      if (attempt > 0) {
+        const delay = Math.min(1000 * Math.pow(2, attempt - 1), 10000);
+        console.log(`⏳ QR-Signaling Retry ${attempt}/${maxRetries} in ${delay}ms...`);
 
-  try {
-    // Create a promise that resolves when we receive HELLO message
-    let helloResolver: () => void;
-    const helloPromise = new Promise<void>((resolve) => {
-      helloResolver = resolve;
-    });
+        store.retryStatus.isRetrying = true;
+        store.retryStatus.type = 'qr-signaling';
+        store.retryStatus.attempt = attempt;
+        store.retryStatus.maxAttempts = maxRetries;
+        store.retryStatus.message = `Verbindung wird wiederhergestellt... (Versuch ${attempt}/${maxRetries})`;
 
-    store.qrSignaling = await SignalingConnection.connect({
-      url: qrSignalingUrl,
-      info: store._proposingClient,
-      onMessage: (data: WsServerMessage) => {
-        switch (data.type) {
-          case "HELLO":
-            // Store QR client ID for answer routing
-            store.qrClientId = data.client.id;
-            console.log(`✅ QR-Connect: Connected to ${qrSignalingUrl}`);
-            console.log(`   - QR Client ID: ${data.client.id}`);
-            helloResolver(); // Resolve the promise when HELLO is received
-            break;
-          case "QR_ANSWER":
-            // Handle QR-Connect answer from receiver
-            if (store._onQRAnswer && (data as any).answer) {
-              console.log('📨 QR-Connect Store: Received QR_ANSWER, calling callback');
-              store._onQRAnswer((data as any).answer);
-              store._onQRAnswer = null;
-            }
-            break;
-          default:
-            // Ignore other message types for QR signaling
-            break;
-        }
-      },
-      generateNewInfo: async () => {
-        const token = await generateClientTokenFromCurrentTimestamp(
-          store.key!,
-        );
-        return {
-          alias: store._proposingClient!.alias,
-          version: store._proposingClient!.version,
-          deviceModel: store._proposingClient!.deviceModel,
-          deviceType: store._proposingClient!.deviceType,
-          token,
-        };
-      },
-      onClose: () => {
-        console.log("QR-Connect signaling connection closed");
-        store.qrSignaling = null;
-        store.qrClientId = null;
-      },
-    });
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
 
-    // Wait for HELLO message before returning
-    await helloPromise;
+      console.log(`🔗 QR-Connect: Connecting to dedicated signaling server: ${qrSignalingUrl}`);
 
-    return store.qrSignaling;
-  } catch (error) {
-    console.error("Failed to connect to QR signaling server:", error);
-    throw error;
+      // Create a promise that resolves when we receive HELLO message
+      let helloResolver: () => void;
+      const helloPromise = new Promise<void>((resolve) => {
+        helloResolver = resolve;
+      });
+
+      store.qrSignaling = await SignalingConnection.connect({
+        url: qrSignalingUrl,
+        info: store._proposingClient,
+        onMessage: (data: WsServerMessage) => {
+          switch (data.type) {
+            case "HELLO":
+              // Store QR client ID for answer routing
+              store.qrClientId = data.client.id;
+              console.log(`✅ QR-Connect: Connected to ${qrSignalingUrl}`);
+              console.log(`   - QR Client ID: ${data.client.id}`);
+              helloResolver(); // Resolve the promise when HELLO is received
+              break;
+            case "QR_ANSWER":
+              // Handle QR-Connect answer from receiver
+              if (store._onQRAnswer && (data as any).answer) {
+                console.log('📨 QR-Connect Store: Received QR_ANSWER, calling callback');
+                store._onQRAnswer((data as any).answer);
+                store._onQRAnswer = null;
+              }
+              break;
+            default:
+              // Ignore other message types for QR signaling
+              break;
+          }
+        },
+        generateNewInfo: async () => {
+          const token = await generateClientTokenFromCurrentTimestamp(
+            store.key!,
+          );
+          return {
+            alias: store._proposingClient!.alias,
+            version: store._proposingClient!.version,
+            deviceModel: store._proposingClient!.deviceModel,
+            deviceType: store._proposingClient!.deviceType,
+            token,
+          };
+        },
+        onClose: () => {
+          console.log("QR-Connect signaling connection closed");
+          store.qrSignaling = null;
+          store.qrClientId = null;
+        },
+      });
+
+      // Wait for HELLO message before returning
+      await helloPromise;
+
+      // Success! Reset retry status
+      store.retryStatus.isRetrying = false;
+      store.retryStatus.type = null;
+      store.retryStatus.attempt = 0;
+      store.retryStatus.maxAttempts = 0;
+      store.retryStatus.message = '';
+
+      return store.qrSignaling;
+    } catch (error) {
+      lastError = error as Error;
+      console.error(`❌ QR-Signaling attempt ${attempt + 1}/${maxRetries + 1} failed:`, error);
+
+      if (attempt === maxRetries) {
+        // Final failure
+        store.retryStatus.isRetrying = false;
+        store.retryStatus.type = null;
+        store.retryStatus.message = '';
+        break;
+      }
+    }
   }
+
+  console.error("Failed to connect to QR signaling server after all retries");
+  throw lastError!;
 }
