@@ -313,7 +313,7 @@ function onFileProgress(progress: FileProgress) {
  * This is separate from the main signaling connection to support QR_ANSWER messages
  */
 export async function setupQRSignaling(): Promise<SignalingConnection> {
-  if (store.qrSignaling) {
+  if (store.qrSignaling && store.qrClientId) {
     return store.qrSignaling;
   }
 
@@ -326,6 +326,12 @@ export async function setupQRSignaling(): Promise<SignalingConnection> {
   console.log(`🔗 QR-Connect: Connecting to dedicated signaling server: ${qrSignalingUrl}`);
 
   try {
+    // Create a promise that resolves when we receive HELLO message
+    let helloResolver: () => void;
+    const helloPromise = new Promise<void>((resolve) => {
+      helloResolver = resolve;
+    });
+
     store.qrSignaling = await SignalingConnection.connect({
       url: qrSignalingUrl,
       info: store._proposingClient,
@@ -336,6 +342,7 @@ export async function setupQRSignaling(): Promise<SignalingConnection> {
             store.qrClientId = data.client.id;
             console.log(`✅ QR-Connect: Connected to ${qrSignalingUrl}`);
             console.log(`   - QR Client ID: ${data.client.id}`);
+            helloResolver(); // Resolve the promise when HELLO is received
             break;
           case "QR_ANSWER":
             // Handle QR-Connect answer from receiver
@@ -365,8 +372,12 @@ export async function setupQRSignaling(): Promise<SignalingConnection> {
       onClose: () => {
         console.log("QR-Connect signaling connection closed");
         store.qrSignaling = null;
+        store.qrClientId = null;
       },
     });
+
+    // Wait for HELLO message before returning
+    await helloPromise;
 
     return store.qrSignaling;
   } catch (error) {
