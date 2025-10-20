@@ -321,7 +321,7 @@ export async function setupQRSignaling(): Promise<SignalingConnection> {
     throw new Error("Store not initialized - call setupConnection first");
   }
 
-  const qrSignalingUrl = "wss://clevrsend-signaling.mytechsupport.deno.net";
+  const qrSignalingUrl = "wss://clevrsend-signaling.onrender.com";
 
   console.log(`🔗 QR-Connect: Connecting to dedicated signaling server: ${qrSignalingUrl}`);
 

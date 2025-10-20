@@ -1220,14 +1220,20 @@ const generateQrSendCode = async () => {
     }
     logQR(`Client initialized: ${store.client.alias} (${store.client.id})`);
 
-    // Use regular client ID for QR-Connect (no separate signaling needed)
-    logQR(`Using regular signaling for QR_ANSWER routing`);
+    // Setup QR signaling connection to Render.com server
+    logQR(`Setting up dedicated QR signaling connection...`);
+    const qrSignaling = await setupQRSignaling();
 
-    // Generate WebRTC offer with ICE candidates (include senderId for answer routing)
+    if (!store.qrClientId) {
+      throw new Error('QR signaling client ID not available');
+    }
+    logQR(`✅ QR signaling connected - Client ID: ${store.qrClientId}`);
+
+    // Generate WebRTC offer with ICE candidates (use QR client ID for answer routing)
     logWebRTC('Generating WebRTC offer...');
     const { qrData, peerId, pc, dataChannel } = await generateQRConnectOffer(
       store.client.alias,
-      store.client.id // Use regular client ID
+      store.qrClientId // Use QR client ID for answer routing
     );
     logWebRTC(`✅ Offer generated - Peer ID: ${peerId}`);
 
@@ -1304,17 +1310,17 @@ const generateQrSendCode = async () => {
       message: 'Warte auf Antwort vom Empfänger...'
     };
 
-    // Setup callback for incoming QR_ANSWER via QR signaling (handled in store)
+    // Setup callback for incoming QR_ANSWER via dedicated QR signaling server (Render.com)
     store._onQRAnswer = async (answer: string) => {
       try {
-        console.log('📨 Received QR_ANSWER from receiver!');
-        console.log('   - Answer data:', answer.substring(0, 100) + '...');
+        logQR('📨 Received QR_ANSWER from receiver via Render.com signaling!');
+        logQR(`   - Answer data length: ${answer.length} chars`);
 
         if (qrPeerConnection.value) {
           // Complete the connection with the answer
           await completeQRConnection(qrPeerConnection.value, answer);
 
-          console.log('✅ QR-Connect completed with answer!');
+          logQR('✅ QR-Connect completed with answer!');
 
           qrConnectionStatus.value = {
             type: 'success',
@@ -1323,10 +1329,10 @@ const generateQrSendCode = async () => {
           };
         }
       } catch (err) {
-        console.error('Error handling QR_ANSWER:', err);
+        logError(err as Error, 'Error handling QR_ANSWER');
       }
     };
-    console.log('👂 Listening for QR_ANSWER via QR signaling...');
+    logQR('👂 Listening for QR_ANSWER via dedicated Render.com signaling...');
 
     qrCodeGenerating.value = false;
     // Note: waitingForAnswer is NOT set to true anymore - answer comes automatically via WebSocket!
@@ -1495,20 +1501,25 @@ const handleQrScanned = async (qrData: string) => {
       message: 'Sende Antwort an Sender...'
     };
 
-    logSignaling(`📤 Sending answer to ${peerAlias} via regular signaling`);
+    logSignaling(`📤 Sending answer to ${peerAlias} via dedicated QR signaling`);
     logSignaling(`Target sender ID: ${senderId}`);
 
-    // Send answer via regular signaling (LocalSend server)
+    // Send answer via dedicated QR signaling (Render.com server)
     try {
-      if (store.signaling && senderId) {
-        logSignaling(`Sending QR_ANSWER to ${senderId} via LocalSend server`);
-        store.signaling.send({
+      // Setup QR signaling connection to Render.com server
+      logQR(`Setting up dedicated QR signaling connection...`);
+      const qrSignaling = await setupQRSignaling();
+      logQR(`✅ QR signaling connected for answer transmission`);
+
+      if (qrSignaling && senderId) {
+        logSignaling(`Sending QR_ANSWER to ${senderId} via Render.com server`);
+        qrSignaling.send({
           type: 'QR_ANSWER',
           targetId: senderId,
           answer: answer
         } as any);
 
-        logSignaling('✅ QR_ANSWER sent to sender via regular signaling');
+        logSignaling('✅ QR_ANSWER sent to sender via Render.com signaling');
         logQR('✅ RECEIVER: Answer transmission complete');
 
         qrConnectionStatus.value = {
@@ -1517,11 +1528,11 @@ const handleQrScanned = async (qrData: string) => {
           message: 'Verbindung wird aufgebaut...'
         };
       } else {
-        logError('No signaling connection available!', 'RECEIVER');
+        logError('No QR signaling connection available!', 'RECEIVER');
         qrConnectionStatus.value = {
           type: 'error',
           icon: 'mdi:alert-circle',
-          message: 'Keine Signaling-Verbindung'
+          message: 'Keine QR-Signaling-Verbindung'
         };
       }
     } catch (err) {
