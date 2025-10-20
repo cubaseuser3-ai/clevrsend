@@ -1817,50 +1817,6 @@ const handleQrScanned = async (qrData: string) => {
       alias: peerAlias
     };
 
-    // Wait for datachannel to be received
-    logQR('⏳ Waiting for DataChannel from sender...');
-    const dataChannel = await dataChannelPromise;
-    logQR('✅ DataChannel received!');
-    logQR(`   - label: ${dataChannel.label}`);
-    logQR(`   - readyState: ${dataChannel.readyState}`);
-
-    // Store datachannel
-    qrDataChannel.value = dataChannel;
-
-    // Setup datachannel event listeners
-    dataChannel.addEventListener('open', () => {
-      logQR('✅ RECEIVER: DataChannel OPEN!');
-      qrConnectionStatus.value = {
-        type: 'success',
-        icon: 'mdi:check-circle',
-        message: `Verbunden mit ${peerAlias}! Bereit für Dateitransfer`
-      };
-
-      // Setup file receiver
-      setupQRFileReceiver(dataChannel);
-    });
-
-    dataChannel.addEventListener('close', () => {
-      logQR('❌ RECEIVER: DataChannel CLOSED');
-      qrConnectionStatus.value = {
-        type: 'error',
-        icon: 'mdi:close-circle',
-        message: 'Verbindung getrennt'
-      };
-      qrPeerConnection.value = null;
-      qrDataChannel.value = null;
-      qrConnectedPeer.value = null;
-    });
-
-    dataChannel.addEventListener('error', (error) => {
-      logError(`DataChannel error: ${error}`, 'QR');
-      qrConnectionStatus.value = {
-        type: 'error',
-        icon: 'mdi:alert-circle',
-        message: `Fehler: Datenkanal-Fehler`
-      };
-    });
-
     // Setup connection listeners for ICE state
     setupQRConnectionListeners(pc, {
       onConnected: () => {
@@ -1923,6 +1879,50 @@ const handleQrScanned = async (qrData: string) => {
           icon: 'mdi:check-circle',
           message: 'Verbindung wird aufgebaut...'
         };
+
+        // NOW wait for datachannel to be received (after answer was sent!)
+        logQR('⏳ Waiting for DataChannel from sender...');
+        const dataChannel = await dataChannelPromise;
+        logQR('✅ DataChannel received!');
+        logQR(`   - label: ${dataChannel.label}`);
+        logQR(`   - readyState: ${dataChannel.readyState}`);
+
+        // Store datachannel
+        qrDataChannel.value = dataChannel;
+
+        // Setup datachannel event listeners
+        dataChannel.addEventListener('open', () => {
+          logQR('✅ RECEIVER: DataChannel OPEN!');
+          qrConnectionStatus.value = {
+            type: 'success',
+            icon: 'mdi:check-circle',
+            message: `Verbunden mit ${peerAlias}! Bereit für Dateitransfer`
+          };
+
+          // Setup file receiver
+          setupQRFileReceiver(dataChannel);
+        });
+
+        dataChannel.addEventListener('close', () => {
+          logQR('❌ RECEIVER: DataChannel CLOSED');
+          qrConnectionStatus.value = {
+            type: 'error',
+            icon: 'mdi:close-circle',
+            message: 'Verbindung getrennt'
+          };
+          qrPeerConnection.value = null;
+          qrDataChannel.value = null;
+          qrConnectedPeer.value = null;
+        });
+
+        dataChannel.addEventListener('error', (error) => {
+          logError(`DataChannel error: ${error}`, 'QR');
+          qrConnectionStatus.value = {
+            type: 'error',
+            icon: 'mdi:alert-circle',
+            message: `Fehler: Datenkanal-Fehler`
+          };
+        });
       } else {
         logError('No QR signaling connection available!', 'RECEIVER');
         qrConnectionStatus.value = {
