@@ -39,7 +39,13 @@ export const store = reactive({
   _onPin: null as (() => Promise<string | null>) | null,
 
   // Callback for QR-Connect answer messages
-  _onQRAnswer: null as ((answer: string) => void) | null,
+  _onQRAnswer: null as ((answer: string, senderId?: string) => void) | null,
+
+  // Callback for incoming ICE candidates (Trickle ICE)
+  _onIceCandidate: null as ((candidate: RTCIceCandidateInit) => void) | null,
+
+  // Connected peer ID for QR-Connect (for Trickle ICE routing)
+  qrConnectedPeerId: null as string | null,
 
   // Public and private key pair for signing and verifying messages
   key: null as CryptoKeyPair | null,
@@ -395,8 +401,17 @@ export async function setupQRSignaling(): Promise<SignalingConnection> {
               // Handle QR-Connect answer from receiver
               if (store._onQRAnswer && (data as any).answer) {
                 console.log('📨 QR-Connect Store: Received QR_ANSWER, calling callback');
-                store._onQRAnswer((data as any).answer);
+                const senderId = (data as any).senderId;
+                store._onQRAnswer((data as any).answer, senderId);
                 store._onQRAnswer = null;
+              }
+              break;
+            case "ICE_CANDIDATE":
+              // Handle incoming ICE candidate (Trickle ICE)
+              if (store._onIceCandidate && (data as any).candidate) {
+                console.log('📨 QR-Connect Store: Received ICE_CANDIDATE, calling callback');
+                console.log(`   - From: ${(data as any).senderId}`);
+                store._onIceCandidate((data as any).candidate);
               }
               break;
             default:

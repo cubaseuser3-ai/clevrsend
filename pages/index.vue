@@ -712,6 +712,7 @@ import {
   processQRConnectOffer,
   completeQRConnection,
   setupQRConnectionListeners,
+  addIceCandidate,
   type QRConnectOffer,
 } from "~/services/qr-connect";
 import {
@@ -1599,7 +1600,20 @@ const generateQrSendCode = async () => {
     logWebRTC('Generating WebRTC offer...');
     const { qrData, peerId, pc, dataChannel } = await generateQRConnectOffer(
       store.client.alias,
-      store.qrClientId // Use QR client ID for answer routing
+      store.qrClientId, // Use QR client ID for answer routing
+      // Trickle ICE: Send candidates as they arrive
+      (candidate) => {
+        logWebRTC('🧊 SENDER: Sending ICE candidate via Trickle ICE');
+        const qrSignaling = store.qrSignaling;
+        if (qrSignaling && store.qrConnectedPeerId) {
+          qrSignaling.send({
+            type: 'ICE_CANDIDATE',
+            targetId: store.qrConnectedPeerId,
+            candidate: candidate.toJSON()
+          } as any);
+          logSignaling(`✅ Sent ICE candidate to ${store.qrConnectedPeerId}`);
+        }
+      }
     );
     logWebRTC(`✅ Offer generated - Peer ID: ${peerId}`);
 
@@ -1680,10 +1694,17 @@ const generateQrSendCode = async () => {
     };
 
     // Setup callback for incoming QR_ANSWER via dedicated QR signaling server (Render.com)
-    store._onQRAnswer = async (answer: string) => {
+    store._onQRAnswer = async (answer: string, senderId?: string) => {
       try {
         logQR('📨 Received QR_ANSWER from receiver via Render.com signaling!');
         logQR(`   - Answer data length: ${answer.length} chars`);
+        logQR(`   - Receiver ID: ${senderId}`);
+
+        // Store receiver's ID for Trickle ICE
+        if (senderId) {
+          store.qrConnectedPeerId = senderId;
+          logQR(`✅ Stored receiver ID for Trickle ICE: ${senderId}`);
+        }
 
         if (qrPeerConnection.value) {
           // Complete the connection with the answer
@@ -1702,6 +1723,22 @@ const generateQrSendCode = async () => {
       }
     };
     logQR('👂 Listening for QR_ANSWER via dedicated Render.com signaling...');
+
+    // Setup callback for incoming ICE candidates (Trickle ICE) - SENDER side
+    store._onIceCandidate = async (candidate: RTCIceCandidateInit) => {
+      try {
+        logWebRTC('📨 SENDER: Received ICE candidate via Trickle ICE');
+        if (qrPeerConnection.value) {
+          await addIceCandidate(qrPeerConnection.value, candidate);
+          logWebRTC('✅ SENDER: ICE candidate added to PeerConnection');
+        } else {
+          logWebRTC('⚠️ SENDER: No PeerConnection available to add ICE candidate');
+        }
+      } catch (err) {
+        logError(err as Error, 'Error adding ICE candidate (SENDER)');
+      }
+    };
+    logQR('👂 Listening for ICE_CANDIDATE via Trickle ICE (SENDER)...');
 
     qrCodeGenerating.value = false;
     // Note: waitingForAnswer is NOT set to true anymore - answer comes automatically via WebSocket!
@@ -1806,7 +1843,20 @@ const handleQrScanned = async (qrData: string) => {
     logWebRTC('Processing QR offer and creating answer...');
     const { peerId, peerAlias, senderId, pc, answer, dataChannelPromise } = await processQRConnectOffer(
       qrData,
-      store.client.alias
+      store.client.alias,
+      // Trickle ICE: Send candidates as they arrive
+      (candidate) => {
+        logWebRTC('🧊 RECEIVER: Sending ICE candidate via Trickle ICE');
+        const qrSignaling = store.qrSignaling;
+        if (qrSignaling && senderId) {
+          qrSignaling.send({
+            type: 'ICE_CANDIDATE',
+            targetId: senderId,
+            candidate: candidate.toJSON()
+          } as any);
+          logSignaling(`✅ Sent ICE candidate to ${senderId}`);
+        }
+      }
     );
     logWebRTC(`✅ Answer created for peer: ${peerAlias}`);
     logQR(`Sender ID from QR: ${senderId}`);
@@ -1880,6 +1930,22 @@ const handleQrScanned = async (qrData: string) => {
           icon: 'mdi:check-circle',
           message: 'Verbindung wird aufgebaut...'
         };
+
+        // Setup callback for incoming ICE candidates (Trickle ICE) - RECEIVER side
+        store._onIceCandidate = async (candidate: RTCIceCandidateInit) => {
+          try {
+            logWebRTC('📨 RECEIVER: Received ICE candidate via Trickle ICE');
+            if (qrPeerConnection.value) {
+              await addIceCandidate(qrPeerConnection.value, candidate);
+              logWebRTC('✅ RECEIVER: ICE candidate added to PeerConnection');
+            } else {
+              logWebRTC('⚠️ RECEIVER: No PeerConnection available to add ICE candidate');
+            }
+          } catch (err) {
+            logError(err as Error, 'Error adding ICE candidate (RECEIVER)');
+          }
+        };
+        logQR('👂 Listening for ICE_CANDIDATE via Trickle ICE (RECEIVER)...');
 
         // NOW wait for datachannel to be received (after answer was sent!)
         logQR('⏳ Waiting for DataChannel from sender...');

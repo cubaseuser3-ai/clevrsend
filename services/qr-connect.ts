@@ -26,7 +26,8 @@ export interface QRConnectAnswer {
  */
 export async function generateQRConnectOffer(
   alias: string,
-  senderId?: string
+  senderId?: string,
+  onIceCandidate?: (candidate: RTCIceCandidate) => void
 ): Promise<{ qrData: string; peerId: string; pc: RTCPeerConnection; dataChannel: RTCDataChannel }> {
 
   // Create unique peer ID
@@ -61,10 +62,16 @@ export async function generateQRConnectOffer(
     iceCandidatePoolSize: 10
   });
 
-  // Setup ICE candidate logging immediately
+  // Setup ICE candidate logging and Trickle ICE support
   pc.addEventListener('icecandidate', (event) => {
     if (event.candidate) {
       console.log('🧊 SENDER ICE Candidate:', event.candidate.type, event.candidate.protocol, event.candidate.address || 'hidden');
+
+      // Trickle ICE: Send candidate immediately via signaling
+      if (onIceCandidate) {
+        console.log('📤 Sending ICE candidate via Trickle ICE...');
+        onIceCandidate(event.candidate);
+      }
     } else {
       console.log('🧊 SENDER ICE Gathering complete');
     }
@@ -111,24 +118,29 @@ export async function generateQRConnectOffer(
   const offer = await pc.createOffer();
   await pc.setLocalDescription(offer);
 
-  // Wait for ICE gathering to complete
+  // Wait for ICE gathering to complete (or timeout for TURN candidates)
   await new Promise<void>((resolve) => {
     if (pc.iceGatheringState === 'complete') {
+      console.log('✅ ICE gathering already complete');
       resolve();
     } else {
       const checkState = () => {
+        console.log(`🧊 ICE gathering state changed to: ${pc.iceGatheringState}`);
         if (pc.iceGatheringState === 'complete') {
           pc.removeEventListener('icegatheringstatechange', checkState);
+          console.log('✅ ICE gathering complete - all candidates collected');
           resolve();
         }
       };
       pc.addEventListener('icegatheringstatechange', checkState);
 
-      // Timeout after 5 seconds
+      // Timeout after 10 seconds (increased from 5s to allow TURN candidates)
       setTimeout(() => {
         pc.removeEventListener('icegatheringstatechange', checkState);
+        console.log(`⚠️ ICE gathering timeout after 10s - state: ${pc.iceGatheringState}`);
+        console.log(`   Trickle ICE will continue sending candidates...`);
         resolve();
-      }, 5000);
+      }, 10000);
     }
   });
 
@@ -163,7 +175,8 @@ export async function generateQRConnectOffer(
  */
 export async function processQRConnectOffer(
   qrData: string,
-  localAlias: string
+  localAlias: string,
+  onIceCandidate?: (candidate: RTCIceCandidate) => void
 ): Promise<{ peerId: string; peerAlias: string; senderId: string; pc: RTCPeerConnection; answer: string; dataChannelPromise: Promise<RTCDataChannel> }> {
 
   // Parse QR data - could be URL or direct JSON
@@ -226,10 +239,16 @@ export async function processQRConnectOffer(
     iceCandidatePoolSize: 10
   });
 
-  // Setup ICE candidate logging immediately
+  // Setup ICE candidate logging and Trickle ICE support
   pc.addEventListener('icecandidate', (event) => {
     if (event.candidate) {
       console.log('🧊 RECEIVER ICE Candidate:', event.candidate.type, event.candidate.protocol, event.candidate.address || 'hidden');
+
+      // Trickle ICE: Send candidate immediately via signaling
+      if (onIceCandidate) {
+        console.log('📤 Sending ICE candidate via Trickle ICE...');
+        onIceCandidate(event.candidate);
+      }
     } else {
       console.log('🧊 RECEIVER ICE Gathering complete');
     }
@@ -268,23 +287,29 @@ export async function processQRConnectOffer(
   const answer = await pc.createAnswer();
   await pc.setLocalDescription(answer);
 
-  // Wait for ICE gathering
+  // Wait for ICE gathering (or timeout for TURN candidates)
   await new Promise<void>((resolve) => {
     if (pc.iceGatheringState === 'complete') {
+      console.log('✅ RECEIVER ICE gathering already complete');
       resolve();
     } else {
       const checkState = () => {
+        console.log(`🧊 RECEIVER ICE gathering state changed to: ${pc.iceGatheringState}`);
         if (pc.iceGatheringState === 'complete') {
           pc.removeEventListener('icegatheringstatechange', checkState);
+          console.log('✅ RECEIVER ICE gathering complete - all candidates collected');
           resolve();
         }
       };
       pc.addEventListener('icegatheringstatechange', checkState);
 
+      // Timeout after 10 seconds (increased from 5s to allow TURN candidates)
       setTimeout(() => {
         pc.removeEventListener('icegatheringstatechange', checkState);
+        console.log(`⚠️ RECEIVER ICE gathering timeout after 10s - state: ${pc.iceGatheringState}`);
+        console.log(`   Trickle ICE will continue sending candidates...`);
         resolve();
-      }, 5000);
+      }, 10000);
     }
   });
 
@@ -475,4 +500,21 @@ export function setupQRConnectionListeners(
       console.log('⚠️ ICE Connection DISCONNECTED');
     }
   });
+}
+
+/**
+ * Add received ICE candidate to PeerConnection (Trickle ICE)
+ */
+export async function addIceCandidate(
+  pc: RTCPeerConnection,
+  candidate: RTCIceCandidateInit
+): Promise<void> {
+  try {
+    console.log('📥 Adding received ICE candidate:', candidate.candidate?.substring(0, 50) + '...');
+    await pc.addIceCandidate(new RTCIceCandidate(candidate));
+    console.log('✅ ICE candidate added successfully');
+  } catch (error) {
+    console.error('❌ Error adding ICE candidate:', error);
+    // Don't throw - some candidates may fail, which is normal
+  }
 }
