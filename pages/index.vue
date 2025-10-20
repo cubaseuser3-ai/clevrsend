@@ -574,14 +574,21 @@
           <!-- Peer Karten -->
           <div
             v-else-if="index > 0"
-            class="peer-card-content"
+            class="peer-card-content peer-card-with-spotlight"
             :class="{ 'drag-over': draggedPeer === store.peers[index - 1]?.id }"
             @click="selectPeer(store.peers[index - 1].id)"
             @dragenter="handleDragEnter(store.peers[index - 1].id)"
             @dragover="handleDragOver($event, store.peers[index - 1].id)"
             @dragleave="handleDragLeave(store.peers[index - 1].id)"
             @drop="handleDrop($event, store.peers[index - 1].id)"
+            @mousemove="handlePeerCardMouseMove($event, index)"
+            :ref="el => setPeerCardRef(el, index)"
           >
+            <!-- Spotlight effect overlay -->
+            <div
+              class="peer-spotlight-overlay"
+              :style="getPeerSpotlightStyle(index)"
+            ></div>
             <div class="card-type-badge peer-card-badge">
               <Icon name="mdi:download" size="14" />
               <span>Empfänger</span>
@@ -615,7 +622,7 @@
 
     <!-- Version Number -->
     <div class="version-number">
-      v1.0.33
+      v1.0.34
     </div>
   </div>
 </template>
@@ -939,6 +946,36 @@ const peerCardGradientColor2 = computed(() => {
   const lighterLightness = Math.min(designSettings.value.peerCardLightness + 10, 100);
   return `hsla(${designSettings.value.peerCardHue}, ${designSettings.value.peerCardSaturation}%, ${lighterLightness}%, 0.3)`;
 });
+
+// Spotlight effect for peer cards
+const peerCardRefs = ref<Record<number, HTMLElement | null>>({});
+const peerCardMousePositions = ref<Record<number, { x: number; y: number }>>({});
+
+const setPeerCardRef = (el: any, index: number) => {
+  if (el) {
+    peerCardRefs.value[index] = el;
+  }
+};
+
+const handlePeerCardMouseMove = (e: MouseEvent, index: number) => {
+  const card = peerCardRefs.value[index];
+  if (!card) return;
+
+  const rect = card.getBoundingClientRect();
+  peerCardMousePositions.value[index] = {
+    x: e.clientX - rect.left,
+    y: e.clientY - rect.top,
+  };
+};
+
+const getPeerSpotlightStyle = (index: number) => {
+  const pos = peerCardMousePositions.value[index];
+  if (!pos) return {};
+
+  return {
+    background: `radial-gradient(circle 120px at ${pos.x}px ${pos.y}px, rgba(255, 255, 255, 0.15), transparent 80%)`,
+  };
+};
 
 // Format timestamp to show date and time
 const getTimeElapsed = (peerId: string) => {
@@ -1505,10 +1542,35 @@ onMounted(async () => {
   text-align: center;
   transition: transform 0.2s;
   position: relative;
+  overflow: hidden;
 }
 
 .peer-card-content:hover {
   transform: translateY(-4px);
+}
+
+/* Spotlight effect */
+.peer-card-with-spotlight {
+  position: relative;
+  overflow: hidden;
+}
+
+.peer-spotlight-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  z-index: 1;
+}
+
+.peer-card-with-spotlight:hover .peer-spotlight-overlay {
+  opacity: 1;
+}
+
+.peer-card-with-spotlight > * {
+  position: relative;
+  z-index: 2;
 }
 
 .peer-icon {
