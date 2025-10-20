@@ -427,17 +427,7 @@
                 </button>
               </div>
 
-              <!-- Show scan button for sender to scan answer -->
-              <div v-if="waitingForAnswer" class="qr-next-step">
-                <p class="qr-next-step-hint">
-                  <Icon name="mdi:arrow-down" size="24" />
-                  Jetzt muss der Empfänger SEINEN QR-Code zeigen
-                </p>
-                <button @click="startQrScan" class="qr-action-button qr-button-secondary">
-                  <Icon name="mdi:camera" size="32" />
-                  <span>Antwort-QR scannen</span>
-                </button>
-              </div>
+              <!-- Note: Old two-way handshake UI removed - answer now comes automatically via WebSocket -->
 
               <button @click="showQrSendCode = false; waitingForAnswer = false" class="qr-close-button">
                 <Icon name="mdi:close" size="20" />
@@ -1318,7 +1308,7 @@ const generateQrSendCode = async () => {
     }
 
     qrCodeGenerating.value = false;
-    waitingForAnswer.value = true;
+    // Note: waitingForAnswer is NOT set to true anymore - answer comes automatically via WebSocket!
   } catch (error) {
     console.error('QR generation error:', error);
     qrConnectionStatus.value = {
@@ -1409,24 +1399,10 @@ const handleQrScanned = async (qrData: string) => {
       throw new Error('Client not initialized');
     }
 
-    // Check if this is an answer (for sender waiting for answer)
-    if (waitingForAnswer.value && qrPeerConnection.value) {
-      try {
-        await completeQRConnection(qrPeerConnection.value, qrData);
-        waitingForAnswer.value = false;
-        qrConnectionStatus.value = {
-          type: 'success',
-          icon: 'mdi:check-circle',
-          message: 'Verbindung erfolgreich hergestellt!'
-        };
-        return;
-      } catch (err) {
-        console.error('Failed to process answer:', err);
-        // Fall through to try as offer
-      }
-    }
+    // Note: Old two-way handshake code removed
+    // Answer now comes automatically via WebSocket, not via QR scan
 
-    // Process QR code and create answer
+    // Process QR code and create answer (this is for RECEIVER only)
     const { peerId, peerAlias, senderId, pc, answer } = await processQRConnectOffer(
       qrData,
       store.client.alias
