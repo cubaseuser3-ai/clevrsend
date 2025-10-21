@@ -4064,11 +4064,12 @@ onMounted(async () => {
 
 /* Legal Footer */
 .legal-footer {
-  margin-top: 4rem;
+  margin-top: auto;
   padding: 2rem 1rem 1.5rem;
   text-align: center;
   border-top: 1px solid rgba(255, 255, 255, 0.1);
   background: linear-gradient(to bottom, transparent, rgba(0, 0, 0, 0.2));
+  opacity: 0.5;
 }
 
 .legal-links {
