@@ -168,7 +168,7 @@
           <h2>11. Kontakt</h2>
           <p>
             Bei Fragen zu diesen AGB wenden Sie sich bitte an:<br>
-            <a href="mailto:info@my-tech.ch">info@my-tech.ch</a>
+            info [at] my-tech [dot] ch
           </p>
         </section>
 

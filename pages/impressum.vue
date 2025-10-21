@@ -33,7 +33,7 @@
         <section>
           <h2>Kontakt</h2>
           <p>
-            E-Mail: <a href="mailto:info@my-tech.ch">info@my-tech.ch</a>
+            E-Mail: info [at] my-tech [dot] ch
           </p>
         </section>
 

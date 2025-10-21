@@ -71,7 +71,7 @@
             Dorfstrasse 105<br>
             3792 Saanen<br>
             Schweiz<br><br>
-            E-Mail: <a href="mailto:info@my-tech.ch">info@my-tech.ch</a>
+            E-Mail: info [at] my-tech [dot] ch
           </p>
         </section>
 
