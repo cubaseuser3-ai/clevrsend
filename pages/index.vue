@@ -2549,8 +2549,8 @@ onMounted(async () => {
 /* Card Type Badge */
 .card-type-badge {
   position: absolute;
-  top: 0.75rem;
-  right: 0.75rem;
+  top: 1rem;
+  right: 1rem;
   display: flex;
   align-items: center;
   gap: 0.35rem;
@@ -2560,7 +2560,7 @@ onMounted(async () => {
   font-weight: 500;
   backdrop-filter: blur(10px);
   z-index: 5;
-  opacity: 0.8;
+  opacity: 0.9;
   pointer-events: none;
 }
 
@@ -2568,10 +2568,10 @@ onMounted(async () => {
 @media (max-width: 480px) {
   .card-type-badge {
     font-size: 0.65rem;
-    padding: 0.35rem 0.55rem;
+    padding: 0.35rem 0.5rem;
     gap: 0.25rem;
-    top: 0.5rem;
-    right: 0.5rem;
+    top: 0.75rem;
+    right: 0.75rem;
   }
 }
 
