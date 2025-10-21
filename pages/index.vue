@@ -3345,7 +3345,14 @@ onMounted(async () => {
 }
 
 .qr-connection-status {
+  position: sticky;
+  top: 0;
+  z-index: 100;
   margin-bottom: 1rem;
+  background: rgba(0, 0, 0, 0.95);
+  backdrop-filter: blur(10px);
+  padding: 0.5rem;
+  border-radius: 0.75rem;
 }
 
 .status-indicator {
