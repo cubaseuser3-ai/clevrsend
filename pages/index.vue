@@ -66,7 +66,7 @@
           :class="['mode-tab', { 'mode-tab-active': activeMode === 'auto' }]"
         >
           <Icon name="mdi:access-point-network" size="20" />
-          <span>Automatisch</span>
+          <span>Lokal</span>
         </button>
         <button
           @click="activeMode = 'qr'"
