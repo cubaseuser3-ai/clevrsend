@@ -66,14 +66,14 @@
           :class="['mode-tab', { 'mode-tab-active': activeMode === 'auto' }]"
         >
           <Icon name="mdi:access-point-network" size="20" />
-          <span>Lokal</span>
+          <span>LokalSend</span>
         </button>
         <button
           @click="activeMode = 'qr'"
           :class="['mode-tab', { 'mode-tab-active': activeMode === 'qr' }]"
         >
           <Icon name="mdi:qrcode-scan" size="20" />
-          <span>QR-Connect</span>
+          <span>InternetSend</span>
         </button>
       </div>
 
