@@ -2464,6 +2464,20 @@ onMounted(async () => {
   color: rgba(255, 255, 255, 0.6);
   margin-top: -0.5rem;
   margin-left: 0;
+  white-space: nowrap;
+}
+
+/* Mobile: Smaller powered-by text */
+@media (max-width: 640px) {
+  .powered-by {
+    font-size: 0.75rem; /* Smaller on mobile */
+  }
+}
+
+@media (max-width: 380px) {
+  .powered-by {
+    font-size: 0.625rem; /* Even smaller on very small screens */
+  }
 }
 
 /* Newest Label */
@@ -2873,6 +2887,20 @@ onMounted(async () => {
 /* Blur Text Title */
 .blur-text-title {
   display: block;
+  white-space: nowrap;
+}
+
+/* Mobile: Smaller logo text */
+@media (max-width: 640px) {
+  .blur-text-title {
+    font-size: 1.875rem !important; /* text-3xl instead of text-4xl */
+  }
+}
+
+@media (max-width: 380px) {
+  .blur-text-title {
+    font-size: 1.5rem !important; /* text-2xl for very small screens */
+  }
 }
 
 /* Drag and Drop */
