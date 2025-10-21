@@ -33,7 +33,10 @@
           />
         </div>
       </div>
-      <div class="flex items-center gap-4">
+      <div class="flex items-center gap-6">
+        <div class="airdrop-tagline">
+          Die AirDrop-Alternative für alle Geräte
+        </div>
         <button
           @click="showShareDialog = !showShareDialog"
           class="share-button"
@@ -2318,6 +2321,64 @@ onMounted(async () => {
 </script>
 
 <style scoped>
+/* AirDrop Tagline */
+.airdrop-tagline {
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.85);
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.15), rgba(59, 130, 246, 0.15));
+  padding: 0.65rem 1.25rem;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(139, 92, 246, 0.3);
+  backdrop-filter: blur(10px);
+  white-space: nowrap;
+  animation: fadeInSlide 1s ease-out 0.5s both;
+  position: relative;
+  overflow: hidden;
+}
+
+.airdrop-tagline::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(
+    45deg,
+    transparent 30%,
+    rgba(255, 255, 255, 0.1) 50%,
+    transparent 70%
+  );
+  animation: shimmer 3s infinite;
+}
+
+@keyframes fadeInSlide {
+  0% {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%) translateY(-100%) rotate(45deg);
+  }
+  100% {
+    transform: translateX(100%) translateY(100%) rotate(45deg);
+  }
+}
+
+@media (max-width: 768px) {
+  .airdrop-tagline {
+    display: none;
+  }
+}
+
 .peer-card-content {
   cursor: pointer;
   display: flex;
