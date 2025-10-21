@@ -21,8 +21,9 @@ export default defineNuxtConfig({
   },
   i18n: {
     baseUrl: "https://clevrsend.com",
-    strategy: "prefix_except_default",
+    strategy: "no_prefix",
     defaultLocale: "de",
+    detectBrowserLanguage: false,
     locales: [
       {
         code: "de",
