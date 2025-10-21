@@ -35,13 +35,6 @@
       </div>
       <div class="flex items-center gap-4">
         <button
-          @click="showQrCodeModal = !showQrCodeModal"
-          class="qr-code-button"
-          title="QR Code anzeigen"
-        >
-          <Icon name="mdi:qrcode" size="24" />
-        </button>
-        <button
           @click="showShareDialog = !showShareDialog"
           class="share-button"
           title="Link teilen"
@@ -2748,26 +2741,6 @@ onMounted(async () => {
 .settings-button:hover {
   background: rgba(255, 255, 255, 0.15);
   transform: scale(1.05);
-}
-
-/* QR Code Button */
-.qr-code-button {
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 0.75rem;
-  padding: 0.75rem;
-  color: white;
-  cursor: pointer;
-  transition: all 0.2s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.qr-code-button:hover {
-  background: rgba(255, 255, 255, 0.15);
-  transform: scale(1.05);
-  box-shadow: 0 0 15px rgba(255, 255, 255, 0.2);
 }
 
 /* Share Button */
