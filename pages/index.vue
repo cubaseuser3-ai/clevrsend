@@ -2601,6 +2601,13 @@ onMounted(async () => {
   align-items: flex-end;
 }
 
+/* Mobile: Hide version info (too much clutter) */
+@media (max-width: 768px) {
+  .version-info {
+    display: none;
+  }
+}
+
 .version-item {
   display: flex;
   gap: 0.5rem;
