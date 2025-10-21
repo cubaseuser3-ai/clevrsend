@@ -1671,14 +1671,13 @@ const generateQrSendCode = async () => {
     logQR('🎬 START: Generate QR Send Code');
 
     qrCodeGenerating.value = true;
-    qrGeneratingCountdown.value = 3; // Start countdown from 3
+    qrGeneratingCountdown.value = 1; // Start countdown from 1
 
-    // Countdown timer: 3 -> 2 -> 1 -> null
+    // Keep countdown running until QR is generated
     const countdownInterval = setInterval(() => {
-      if (qrGeneratingCountdown.value && qrGeneratingCountdown.value > 1) {
-        qrGeneratingCountdown.value--;
+      if (qrGeneratingCountdown.value !== null && qrCodeGenerating.value) {
+        qrGeneratingCountdown.value = ((qrGeneratingCountdown.value + 1) % 4) || 1; // Cycle 1->2->3->1
       } else {
-        qrGeneratingCountdown.value = null;
         clearInterval(countdownInterval);
       }
     }, 1000);
