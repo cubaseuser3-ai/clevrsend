@@ -534,9 +534,9 @@
         v-else-if="store.peers.length === 0"
         class="flex-1 px-4 py-8 relative z-10 overflow-y-auto"
       >
-        <MagicBento :items="[{}, {}]">
+        <MagicBento :items="emptyStateItems">
           <template v-slot:card-0>
-            <!-- Eigene Karte -->
+            <!-- Eigene Karte - Empty State -->
             <div
               v-if="store.client"
               class="peer-card-content own-card"
@@ -562,7 +562,19 @@
                     {{ store.pin ?? t("index.pin.none") }}
                   </span>
                 </div>
+
+                <button
+                  @click="updatePIN"
+                  class="own-card-pin-button"
+                  title="PIN ändern"
+                >
+                  <Icon name="mdi:key" size="24" />
+                </button>
               </div>
+
+              <p class="own-card-device text-sm opacity-60 mt-4">
+                {{ store.client.deviceModel }}
+              </p>
             </div>
           </template>
 
@@ -1317,6 +1329,31 @@ const bentoItems = computed(() => {
     glow: true, // Alle Karten mit Glow
     particles: true, // Alle Karten mit Partikeln
   }));
+});
+
+// Empty State Items (Own Card + Waiting Card)
+const emptyStateItems = computed(() => {
+  const items: any[] = [];
+
+  // Eigene Karte
+  if (store.client) {
+    items.push({
+      title: `<span style="font-size: 0.9rem; color: rgba(200, 200, 200, 0.9); font-weight: 400;">Dein Übertragungsname:</span> ${store.client.alias}`,
+      description: store.client.deviceModel,
+      size: 'medium' as 'medium',
+      glow: true,
+      particles: true,
+      isOwnCard: true,
+    });
+  }
+
+  // Warte-Karte (leeres Objekt für Slot)
+  items.push({
+    title: '',
+    size: 'medium' as 'medium',
+  });
+
+  return items;
 });
 
 // Handle click on own card
