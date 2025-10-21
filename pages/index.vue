@@ -1025,8 +1025,9 @@ const generateQrCodeModal = async () => {
   try {
     const QRCode = (await import('qrcode')).default;
     await QRCode.toCanvas(qrCodeModalCanvas.value, shareUrl.value, {
-      width: 400,
-      margin: 3,
+      width: 300,
+      margin: 2,
+      errorCorrectionLevel: 'L',
       color: {
         dark: '#000000',
         light: '#ffffff',
@@ -1702,9 +1703,9 @@ const generateQrSendCode = async () => {
     const QRCode = (await import('qrcode')).default;
 
     await QRCode.toCanvas(qrSendCanvas.value, qrData, {
-      width: 400,
-      margin: 4,
-      errorCorrectionLevel: 'L', // Low error correction = less dense QR code
+      width: 300,
+      margin: 2,
+      errorCorrectionLevel: 'L', // Low error correction = faster generation
       color: {
         dark: '#000000',
         light: '#FFFFFF'
