@@ -626,6 +626,9 @@
               </button>
             </div>
 
+            <p class="own-card-device text-sm opacity-60 mt-4">
+              {{ store.client.deviceModel }}
+            </p>
           </div>
 
           <!-- Peer Karten -->
@@ -1275,6 +1278,7 @@ const allItems = computed(() => {
   if (store.client) {
     items.push({
       title: `<span style="font-size: 0.9rem; color: rgba(200, 200, 200, 0.9); font-weight: 400;">Dein Übertragungsname:</span> ${store.client.alias}`,
+      description: store.client.deviceModel,
       size: 'medium' as 'medium',
       glow: true,
       particles: true,
@@ -1286,6 +1290,7 @@ const allItems = computed(() => {
   store.peers.forEach((peer) => {
     items.push({
       title: `<span style="font-size: 0.9rem; color: rgba(200, 200, 200, 0.9); font-weight: 400;">Empfänger:</span> ${peer.alias}`,
+      description: peer.deviceModel,
       timestamp: getTimeElapsed(peer.id),
       size: 'medium' as 'medium',
       glow: true,
@@ -1307,6 +1312,7 @@ const allItems = computed(() => {
 const bentoItems = computed(() => {
   return store.peers.map((peer) => ({
     title: peer.alias,
+    description: peer.deviceModel,
     size: 'medium' as 'medium', // Alle Karten gleich groß
     glow: true, // Alle Karten mit Glow
     particles: true, // Alle Karten mit Partikeln
