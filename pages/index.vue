@@ -681,6 +681,20 @@
         </div>
       </transition-group>
     </div>
+
+    <!-- Legal Footer -->
+    <footer class="legal-footer">
+      <div class="legal-links">
+        <NuxtLink to="/impressum" class="legal-link">Impressum</NuxtLink>
+        <span class="legal-separator">|</span>
+        <NuxtLink to="/datenschutz" class="legal-link">Datenschutz</NuxtLink>
+        <span class="legal-separator">|</span>
+        <NuxtLink to="/agb" class="legal-link">AGB</NuxtLink>
+      </div>
+      <div class="legal-copyright">
+        © {{ new Date().getFullYear() }} MyTech Support GmbH
+      </div>
+    </footer>
   </div>
 </template>
 
@@ -3795,6 +3809,59 @@ onMounted(async () => {
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+/* Legal Footer */
+.legal-footer {
+  margin-top: 4rem;
+  padding: 2rem 1rem 1.5rem;
+  text-align: center;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  background: linear-gradient(to bottom, transparent, rgba(0, 0, 0, 0.2));
+}
+
+.legal-links {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+
+.legal-link {
+  color: rgba(255, 255, 255, 0.5);
+  text-decoration: none;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: color 0.2s ease;
+}
+
+.legal-link:hover {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.legal-separator {
+  color: rgba(255, 255, 255, 0.3);
+  font-size: 0.9rem;
+}
+
+.legal-copyright {
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 0.85rem;
+  font-weight: 400;
+}
+
+/* Mobile: Stack legal links vertically */
+@media (max-width: 480px) {
+  .legal-links {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .legal-separator {
+    display: none;
   }
 }
 </style>
