@@ -2304,6 +2304,14 @@ onMounted(async () => {
   transition: transform 0.2s;
   position: relative;
   overflow: hidden;
+  padding-top: 3rem; /* Space for badge on top */
+}
+
+/* Mobile: Less top padding */
+@media (max-width: 480px) {
+  .peer-card-content {
+    padding-top: 2.5rem;
+  }
 }
 
 .peer-card-content:hover {
@@ -2431,12 +2439,20 @@ onMounted(async () => {
   background: transparent !important;
   border-color: rgba(249, 115, 22, 0.4) !important;
   cursor: default !important;
+  padding-top: 3rem; /* Space for badge on top */
 }
 
 .own-card:hover {
   background: transparent !important;
   border-color: rgba(249, 115, 22, 0.5) !important;
   transform: translateY(0) !important;
+}
+
+/* Mobile: Less top padding */
+@media (max-width: 480px) {
+  .own-card {
+    padding-top: 2.5rem;
+  }
 }
 
 .own-card .peer-name {
