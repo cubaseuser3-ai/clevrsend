@@ -3127,11 +3127,15 @@ onMounted(async () => {
   padding: 1.5rem;
   border-radius: 1rem;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
 .qr-code-canvas-large {
   display: block;
   border-radius: 0.5rem;
+  margin: 0 auto;
 }
 
 .qr-code-modal-hint {
@@ -3498,10 +3502,14 @@ onMounted(async () => {
   padding: 1.5rem;
   border-radius: 1rem;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
 .qr-canvas {
   display: block;
+  margin: 0 auto;
 }
 
 .qr-code-hint {
