@@ -73,6 +73,11 @@
         </button>
       </div>
 
+      <!-- AirDrop Tagline for Mobile -->
+      <div class="airdrop-tagline-mobile">
+        Die AirDrop-Alternative für alle Geräte
+      </div>
+
       <!-- Retry Status Indicator -->
       <div v-if="store.retryStatus.isRetrying" class="retry-status-bar">
         <div class="retry-status-content">
@@ -2359,14 +2364,31 @@ onMounted(async () => {
   }
 }
 
+/* Mobile: Hide desktop tagline */
 @media (max-width: 768px) {
   .airdrop-tagline {
-    position: absolute;
-    top: 4.5rem;
-    left: 50%;
-    transform: translateX(-50%);
+    display: none;
+  }
+}
+
+/* Mobile Tagline under Mode Tabs */
+.airdrop-tagline-mobile {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .airdrop-tagline-mobile {
+    display: block;
+    margin-top: 0.75rem;
     font-size: 0.75rem;
-    padding: 0.4rem 0.85rem;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.75);
+    background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(59, 130, 246, 0.1));
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    border: 1px solid rgba(139, 92, 246, 0.25);
+    backdrop-filter: blur(10px);
+    text-align: center;
     animation: fadeInSlide 1s ease-out 0.8s both;
   }
 }
