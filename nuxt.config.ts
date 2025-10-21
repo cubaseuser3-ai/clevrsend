@@ -20,22 +20,22 @@ export default defineNuxtConfig({
     },
   },
   i18n: {
-    baseUrl: "https://clevrsend.vercel.app",
+    baseUrl: "https://clevrsend.com",
     strategy: "prefix_except_default",
-    defaultLocale: "en",
+    defaultLocale: "de",
     locales: [
       {
         code: "de",
         language: "de-DE",
         file: "de.json",
         name: "Deutsch",
+        isCatchallLocale: true,
       },
       {
         code: "en",
         language: "en-US",
         file: "en.json",
         name: "English",
-        isCatchallLocale: true,
       },
       {
         code: "km",
