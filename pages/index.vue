@@ -563,10 +563,6 @@
                   </span>
                 </div>
               </div>
-
-              <div class="own-card-device">
-                {{ store.client.deviceModel ?? "Browser" }}
-              </div>
             </div>
           </template>
 
