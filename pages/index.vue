@@ -1688,9 +1688,16 @@ const generateQrSendCode = async () => {
       },
       onError: (error) => {
         qrConnectionStatus.value = {
+          type: 'info',
+          icon: 'mdi:loading',
+          message: error.message
+        };
+      },
+      onFailed: () => {
+        qrConnectionStatus.value = {
           type: 'error',
           icon: 'mdi:alert-circle',
-          message: `Fehler: ${error.message}`
+          message: 'Verbindung fehlgeschlagen. Bitte erneut versuchen.'
         };
       }
     });
@@ -1915,9 +1922,16 @@ const handleQrScanned = async (qrData: string) => {
       },
       onError: (error) => {
         qrConnectionStatus.value = {
+          type: 'info',
+          icon: 'mdi:loading',
+          message: error.message
+        };
+      },
+      onFailed: () => {
+        qrConnectionStatus.value = {
           type: 'error',
           icon: 'mdi:alert-circle',
-          message: `Fehler: ${error.message}`
+          message: 'Verbindung fehlgeschlagen. Bitte erneut versuchen.'
         };
       }
     });

@@ -443,15 +443,39 @@ export function setupQRConnectionListeners(
     onDisconnected?: () => void;
     onDataChannel?: (channel: RTCDataChannel) => void;
     onError?: (error: Error) => void;
+    onFailed?: () => void;
   }
 ) {
+  let hasConnected = false;
+  let iceRestartAttempts = 0;
+  const maxIceRestarts = 2;
+
   pc.addEventListener('connectionstatechange', () => {
     console.log('QR-Connect: Connection state:', pc.connectionState);
 
     if (pc.connectionState === 'connected') {
+      hasConnected = true;
+      iceRestartAttempts = 0;
       callbacks.onConnected?.();
-    } else if (pc.connectionState === 'disconnected' || pc.connectionState === 'failed') {
-      callbacks.onDisconnected?.();
+    } else if (pc.connectionState === 'disconnected') {
+      // Only treat as error if we never connected
+      if (!hasConnected) {
+        console.log('⚠️ Disconnected before first connection - may recover');
+        callbacks.onError?.(new Error('Verbindung wird aufgebaut...'));
+      } else {
+        callbacks.onDisconnected?.();
+      }
+    } else if (pc.connectionState === 'failed') {
+      if (!hasConnected && iceRestartAttempts < maxIceRestarts) {
+        console.log(`🔄 ICE failed, attempting restart ${iceRestartAttempts + 1}/${maxIceRestarts}`);
+        iceRestartAttempts++;
+        // Trigger ICE restart
+        pc.restartIce();
+        callbacks.onError?.(new Error(`Verbindungsaufbau fehlgeschlagen, Versuch ${iceRestartAttempts}/${maxIceRestarts}...`));
+      } else {
+        callbacks.onFailed?.();
+        callbacks.onDisconnected?.();
+      }
     }
   });
 
