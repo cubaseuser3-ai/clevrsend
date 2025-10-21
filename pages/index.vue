@@ -529,13 +529,66 @@
         </h3>
       </div>
 
+      <!-- Empty State: Own Card + Waiting Card -->
       <div
         v-else-if="store.peers.length === 0"
-        class="flex-1 flex flex-col items-center justify-center text-center px-2 relative z-10"
+        class="flex-1 px-4 py-8 relative z-10 overflow-y-auto"
       >
-        <h3 class="text-3xl">{{ t("index.empty.title") }}</h3>
-        <h3 class="mt-2">{{ t("index.empty.deviceHint") }}</h3>
-        <h3>{{ t("index.empty.lanHint") }}</h3>
+        <MagicBento :items="[{}, {}]">
+          <template v-slot:card-0>
+            <!-- Eigene Karte -->
+            <div
+              v-if="store.client"
+              class="peer-card-content own-card"
+            >
+              <div class="card-type-badge own-card-badge">
+                <Icon name="mdi:send" size="14" />
+                <span>Sender</span>
+              </div>
+
+              <div class="own-card-user-info">
+                <div class="own-card-info-item">
+                  <span class="own-card-label">Dein Übertragungsname:</span>
+                  <span class="own-card-value cursor-pointer" @click="updateAlias">
+                    {{ store.client.alias }}
+                  </span>
+                </div>
+
+                <div class="own-card-divider"></div>
+
+                <div class="own-card-info-item">
+                  <span class="own-card-label">PIN:</span>
+                  <span class="own-card-value cursor-pointer" @click="updatePIN">
+                    {{ store.pin ?? t("index.pin.none") }}
+                  </span>
+                </div>
+              </div>
+
+              <div class="own-card-device">
+                {{ store.client.deviceModel ?? "Browser" }}
+              </div>
+            </div>
+          </template>
+
+          <template v-slot:card-1>
+            <!-- Warte-Karte -->
+            <div class="peer-card-content waiting-card">
+              <div class="waiting-card-icon">
+                <Icon name="mdi:radar" size="64" class="radar-icon" />
+              </div>
+              <div class="waiting-card-text">
+                <h3 class="waiting-card-title">Warte auf Geräte...</h3>
+                <p class="waiting-card-hint">{{ t("index.empty.deviceHint") }}</p>
+                <p class="waiting-card-hint">{{ t("index.empty.lanHint") }}</p>
+              </div>
+              <div class="waiting-card-dots">
+                <span class="dot"></span>
+                <span class="dot"></span>
+                <span class="dot"></span>
+              </div>
+            </div>
+          </template>
+        </MagicBento>
       </div>
 
       <div v-else class="flex-1 px-4 py-8 relative z-10 overflow-y-auto">
@@ -3841,6 +3894,101 @@ onMounted(async () => {
   .toast {
     min-width: auto;
     max-width: none;
+  }
+}
+
+/* Waiting Card (Empty State) */
+.waiting-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.5rem;
+  padding: 2rem;
+  background: rgba(59, 130, 246, 0.05);
+  border: 2px dashed rgba(59, 130, 246, 0.3);
+  cursor: default;
+  height: 100%;
+}
+
+.waiting-card:hover {
+  transform: none;
+  background: rgba(59, 130, 246, 0.05);
+}
+
+.waiting-card-icon {
+  color: rgba(59, 130, 246, 0.6);
+}
+
+.radar-icon {
+  animation: radar-pulse 2s ease-in-out infinite;
+}
+
+@keyframes radar-pulse {
+  0%, 100% {
+    opacity: 0.4;
+    transform: scale(1) rotate(0deg);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.1) rotate(180deg);
+  }
+}
+
+.waiting-card-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  text-align: center;
+}
+
+.waiting-card-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.waiting-card-hint {
+  font-size: 0.875rem;
+  color: rgba(255, 255, 255, 0.6);
+  margin: 0;
+}
+
+.waiting-card-dots {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  justify-content: center;
+}
+
+.waiting-card-dots .dot {
+  width: 8px;
+  height: 8px;
+  background: rgba(59, 130, 246, 0.6);
+  border-radius: 50%;
+  animation: dot-pulse 1.4s ease-in-out infinite;
+}
+
+.waiting-card-dots .dot:nth-child(1) {
+  animation-delay: 0s;
+}
+
+.waiting-card-dots .dot:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.waiting-card-dots .dot:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes dot-pulse {
+  0%, 80%, 100% {
+    opacity: 0.3;
+    transform: scale(0.8);
+  }
+  40% {
+    opacity: 1;
+    transform: scale(1.2);
   }
 }
 
