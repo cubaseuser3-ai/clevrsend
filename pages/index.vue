@@ -1432,7 +1432,7 @@ const openQrFileDialog = async () => {
 
     if (!qrDataChannel.value || qrDataChannel.value.readyState !== 'open') {
       logError('QR DataChannel is not open!', 'QR_FILE_UPLOAD');
-      showNotification('QR-Verbindung ist nicht bereit. Bitte erneut verbinden.', 'error');
+      showNotification('ClevrSend Verbindung ist nicht bereit. Bitte erneut verbinden.', 'error');
       return;
     }
 
@@ -1575,7 +1575,7 @@ const generateQrSendCode = async () => {
     qrConnectionStatus.value = {
       type: 'info',
       icon: 'mdi:loading',
-      message: 'WebRTC Verbindung wird vorbereitet...'
+      message: 'ClevrSend Verbindung wird vorbereitet...'
     };
 
     showQrSendCode.value = true;
