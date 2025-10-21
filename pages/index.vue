@@ -3079,7 +3079,8 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  animation: fadeIn 0.3s ease-out;
+  opacity: 0;
+  animation: fadeIn 0.3s ease-out forwards;
 }
 
 .qr-code-modal {
@@ -3091,7 +3092,8 @@ onMounted(async () => {
   max-width: 550px;
   width: 90%;
   box-shadow: 0 0 60px rgba(249, 115, 22, 0.3);
-  animation: scaleIn 0.3s ease-out;
+  opacity: 0;
+  animation: scaleIn 0.3s ease-out forwards;
 }
 
 @keyframes scaleIn {
@@ -3302,8 +3304,8 @@ onMounted(async () => {
 .mode-tab {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.75rem 1.5rem;
+  gap: 0.4rem;
+  padding: 0.5rem 1rem;
   border-radius: 0.5rem;
   background: transparent;
   color: rgba(255, 255, 255, 0.6);
@@ -3311,6 +3313,7 @@ onMounted(async () => {
   transition: all 0.2s;
   border: 1px solid transparent;
   font-weight: 500;
+  font-size: 0.9rem;
 }
 
 .mode-tab:hover {
