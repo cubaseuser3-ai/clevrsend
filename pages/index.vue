@@ -3667,11 +3667,14 @@ onMounted(async () => {
   display: flex;
   justify-content: center;
   align-items: center;
+  width: 100%;
 }
 
 .qr-canvas {
   display: block;
   margin: 0 auto;
+  max-width: 100%;
+  height: auto;
 }
 
 .qr-code-hint {
