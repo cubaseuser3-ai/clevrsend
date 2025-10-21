@@ -311,7 +311,7 @@
     </div>
 
     <!-- QR Code Modal -->
-    <div v-if="showQrCodeModal" class="qr-code-modal-overlay relative z-30" @click="showQrCodeModal = false">
+    <div v-if="showQrCodeModal" class="qr-code-modal-overlay z-30" @click="showQrCodeModal = false">
       <div class="qr-code-modal" @click.stop>
         <div class="qr-code-modal-header">
           <h3 class="text-2xl font-bold">QR Code scannen</h3>
@@ -3909,6 +3909,7 @@ onMounted(async () => {
   border: 2px dashed rgba(59, 130, 246, 0.3);
   cursor: default;
   height: 100%;
+  min-height: 280px; /* Same height as own card */
 }
 
 .waiting-card:hover {
