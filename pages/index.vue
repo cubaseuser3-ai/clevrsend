@@ -425,7 +425,11 @@
             <!-- Loading State -->
             <div v-if="qrCodeGenerating" class="qr-loading">
               <div class="qr-loading-spinner"></div>
-              <p class="qr-loading-text">QR-Code wird generiert...</p>
+              <p class="qr-loading-text">
+                QR-Code wird generiert
+                <span v-if="qrGeneratingCountdown !== null" class="qr-countdown">{{ qrGeneratingCountdown }}</span>
+                <span v-else>...</span>
+              </p>
             </div>
 
             <!-- QR Code Display Info -->
@@ -791,6 +795,7 @@ const showQrSendCode = ref(false);
 const qrSendCanvas = ref<HTMLCanvasElement | null>(null);
 const qrSendUrl = ref<string>('');
 const qrCodeGenerating = ref(false);
+const qrGeneratingCountdown = ref<number | null>(null);
 const qrAnswerCanvas = ref<HTMLCanvasElement | null>(null);
 const showQrAnswerCode = ref(false);
 const qrAnswerUrl = ref<string>('');
@@ -1587,6 +1592,18 @@ const generateQrSendCode = async () => {
     logQR('🎬 START: Generate QR Send Code');
 
     qrCodeGenerating.value = true;
+    qrGeneratingCountdown.value = 3; // Start countdown from 3
+
+    // Countdown timer: 3 -> 2 -> 1 -> null
+    const countdownInterval = setInterval(() => {
+      if (qrGeneratingCountdown.value && qrGeneratingCountdown.value > 1) {
+        qrGeneratingCountdown.value--;
+      } else {
+        qrGeneratingCountdown.value = null;
+        clearInterval(countdownInterval);
+      }
+    }, 1000);
+
     qrConnectionStatus.value = {
       type: 'info',
       icon: 'mdi:loading',
@@ -1787,6 +1804,7 @@ const generateQrSendCode = async () => {
     logQR('👂 Listening for ICE_CANDIDATE via Trickle ICE (SENDER)...');
 
     qrCodeGenerating.value = false;
+    qrGeneratingCountdown.value = null; // Clear countdown on success
     // Note: waitingForAnswer is NOT set to true anymore - answer comes automatically via WebSocket!
   } catch (error) {
     console.error('QR generation error:', error);
@@ -1796,6 +1814,7 @@ const generateQrSendCode = async () => {
       message: `Fehler beim Generieren: ${error instanceof Error ? error.message : 'Unbekannter Fehler'}`
     };
     qrCodeGenerating.value = false;
+    qrGeneratingCountdown.value = null; // Clear countdown on error
   }
 };
 
@@ -3620,6 +3639,26 @@ onMounted(async () => {
 .qr-loading-text {
   color: rgba(255, 255, 255, 0.7);
   font-size: 1rem;
+}
+
+.qr-countdown {
+  display: inline-block;
+  margin-left: 0.5rem;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: rgba(59, 130, 246, 0.9);
+  animation: pulse 1s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale(1.1);
+  }
 }
 
 .qr-next-step {
