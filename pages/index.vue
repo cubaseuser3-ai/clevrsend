@@ -1624,6 +1624,9 @@ const generateQrSendCode = async () => {
     qrPeerConnection.value = pc;
     qrDataChannel.value = dataChannel;
 
+    // Keep-alive interval to maintain connection
+    let keepAliveInterval: NodeJS.Timeout | null = null;
+
     // Setup data channel open listener to update status
     dataChannel.addEventListener('open', () => {
       console.log('🎉 QR-Connect SENDER: Channel opened in index.vue!');
@@ -1637,6 +1640,27 @@ const generateQrSendCode = async () => {
 
       // Setup file receiver (sender can also receive files)
       setupQRFileReceiver(dataChannel);
+
+      // Start keep-alive pings every 5 seconds
+      keepAliveInterval = setInterval(() => {
+        if (dataChannel.readyState === 'open') {
+          try {
+            dataChannel.send(JSON.stringify({ type: 'ping', timestamp: Date.now() }));
+          } catch (e) {
+            console.warn('Keep-alive ping failed:', e);
+          }
+        } else {
+          if (keepAliveInterval) clearInterval(keepAliveInterval);
+        }
+      }, 5000);
+    });
+
+    // Clear keep-alive on close
+    dataChannel.addEventListener('close', () => {
+      if (keepAliveInterval) {
+        clearInterval(keepAliveInterval);
+        keepAliveInterval = null;
+      }
     });
 
     // Setup connection listeners
@@ -1957,6 +1981,9 @@ const handleQrScanned = async (qrData: string) => {
         // Store datachannel
         qrDataChannel.value = dataChannel;
 
+        // Keep-alive interval for receiver
+        let keepAliveInterval: NodeJS.Timeout | null = null;
+
         // Setup datachannel event listeners
         dataChannel.addEventListener('open', () => {
           logQR('✅ RECEIVER: DataChannel OPEN!');
@@ -1968,6 +1995,19 @@ const handleQrScanned = async (qrData: string) => {
 
           // Setup file receiver
           setupQRFileReceiver(dataChannel);
+
+          // Start keep-alive pings every 5 seconds
+          keepAliveInterval = setInterval(() => {
+            if (dataChannel.readyState === 'open') {
+              try {
+                dataChannel.send(JSON.stringify({ type: 'ping', timestamp: Date.now() }));
+              } catch (e) {
+                console.warn('Keep-alive ping failed:', e);
+              }
+            } else {
+              if (keepAliveInterval) clearInterval(keepAliveInterval);
+            }
+          }, 5000);
         });
 
         dataChannel.addEventListener('close', () => {
@@ -1978,6 +2018,12 @@ const handleQrScanned = async (qrData: string) => {
             message: 'Verbindung getrennt'
           };
           qrPeerConnection.value = null;
+
+          // Clear keep-alive
+          if (keepAliveInterval) {
+            clearInterval(keepAliveInterval);
+            keepAliveInterval = null;
+          }
           qrDataChannel.value = null;
           qrConnectedPeer.value = null;
         });

@@ -196,6 +196,11 @@ export class QRFileReceiver {
   }
 
   private handleControlMessage(message: any) {
+    // Ignore keep-alive ping messages
+    if (message.type === 'ping' || message.type === 'pong') {
+      return;
+    }
+
     console.log('📥 Received control message:', message.type);
 
     switch (message.type) {
