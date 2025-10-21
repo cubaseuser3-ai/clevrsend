@@ -2549,8 +2549,8 @@ onMounted(async () => {
 /* Card Type Badge */
 .card-type-badge {
   position: absolute;
-  bottom: calc(0.75rem - 15px);
-  right: calc(0.75rem - 14px);
+  top: 0.75rem;
+  right: 0.75rem;
   display: flex;
   align-items: center;
   gap: 0.35rem;
@@ -2562,6 +2562,17 @@ onMounted(async () => {
   z-index: 5;
   opacity: 0.8;
   pointer-events: none;
+}
+
+/* Mobile: Smaller badges to prevent overflow */
+@media (max-width: 480px) {
+  .card-type-badge {
+    font-size: 0.65rem;
+    padding: 0.35rem 0.55rem;
+    gap: 0.25rem;
+    top: 0.5rem;
+    right: 0.5rem;
+  }
 }
 
 .own-card-badge {
