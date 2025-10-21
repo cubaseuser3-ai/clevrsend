@@ -626,9 +626,6 @@
               </button>
             </div>
 
-            <p class="own-card-device text-sm opacity-60 mt-4">
-              {{ store.client.deviceModel }}
-            </p>
           </div>
 
           <!-- Peer Karten -->

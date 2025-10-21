@@ -166,6 +166,22 @@
         </section>
 
         <section>
+          <h2>7a. Verwendung von Open Source Software</h2>
+          <p>
+            ClevrSend basiert teilweise auf Open Source Software, insbesondere:
+          </p>
+          <ul>
+            <li><strong>LocalSend</strong> - MIT License - Copyright (c) 2022 Tien Do Nam</li>
+            <li>Weitere Open Source Bibliotheken gemäß deren jeweiliger Lizenz</li>
+          </ul>
+          <p>
+            Diese Open Source Komponenten werden gemäß ihren Lizenzbedingungen genutzt und
+            verändern nicht die Datenverarbeitung oder Speicherung. Alle Datenschutzgrundsätze
+            dieser Erklärung gelten unabhängig von den verwendeten Software-Komponenten.
+          </p>
+        </section>
+
+        <section>
           <h2>8. Stand dieser Datenschutzerklärung</h2>
           <p>Stand: {{ new Date().toLocaleDateString('de-DE', { year: 'numeric', month: 'long' }) }}</p>
         </section>

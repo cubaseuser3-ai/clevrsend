@@ -140,11 +140,27 @@
         </section>
 
         <section>
-          <h2>8. Geistiges Eigentum</h2>
+          <h2>8. Geistiges Eigentum und Open Source</h2>
+
+          <h3>8.1 Eigenentwicklung</h3>
           <p>
-            Alle Rechte an ClevrSend, einschließlich Design, Code und Marken, liegen bei
-            der MyTech Support GmbH. Eine Nutzung über den vorgesehenen Zweck hinaus
+            Alle Rechte an ClevrSend, einschließlich Design, Marken und eigenen Code-Komponenten,
+            liegen bei der MyTech Support GmbH. Eine Nutzung über den vorgesehenen Zweck hinaus
             bedarf der schriftlichen Genehmigung.
+          </p>
+
+          <h3>8.2 Open Source Komponenten</h3>
+          <p>
+            ClevrSend nutzt Open Source Software, insbesondere Teile von LocalSend
+            (MIT-Lizenz). Die entsprechenden Lizenzbedingungen werden eingehalten:
+          </p>
+          <ul>
+            <li><strong>LocalSend</strong> - MIT License - Copyright (c) 2022 Tien Do Nam</li>
+            <li>Weitere verwendete Open Source Bibliotheken sind in der Dokumentation aufgeführt</li>
+          </ul>
+          <p>
+            Die vollständigen Lizenztexte der verwendeten Open Source Komponenten sind auf
+            Anfrage erhältlich.
           </p>
         </section>
 
