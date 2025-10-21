@@ -138,9 +138,9 @@ onMounted(() => {
     // Use renderer.setSize which handles both canvas and viewport properly
     renderer.setSize(w * props.resolutionScale, h * props.resolutionScale);
 
-    // Set CSS size to full screen
-    canvas.style.width = w + 'px';
-    canvas.style.height = h + 'px';
+    // Set CSS size to full screen - explicitly set to cover entire viewport
+    canvas.style.width = '100vw';
+    canvas.style.height = '100vh';
 
     // Update uniforms with actual display size
     (program.uniforms.uResolution.value as Vec2).set(w, h);
