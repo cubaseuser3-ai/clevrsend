@@ -2375,7 +2375,13 @@ onMounted(async () => {
 
 @media (max-width: 768px) {
   .airdrop-tagline {
-    display: none;
+    position: absolute;
+    top: 4.5rem;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.75rem;
+    padding: 0.4rem 0.85rem;
+    animation: fadeInSlide 1s ease-out 0.8s both;
   }
 }
 
