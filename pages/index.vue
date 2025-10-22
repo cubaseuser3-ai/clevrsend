@@ -855,6 +855,40 @@ const qrConnectedPeer = ref<{
 } | null>(null);
 const qrFileReceiver = ref<QRFileReceiver | null>(null);
 
+// Wake Lock to keep tab active during file transfer
+let wakeLock: WakeLockSentinel | null = null;
+
+// Request Wake Lock to prevent tab from sleeping during transfer
+const requestWakeLock = async () => {
+  if ('wakeLock' in navigator) {
+    try {
+      wakeLock = await navigator.wakeLock.request('screen');
+      console.log('✅ Wake Lock activated - Tab will stay active during transfer');
+
+      wakeLock.addEventListener('release', () => {
+        console.log('🔓 Wake Lock released');
+      });
+    } catch (err) {
+      console.warn('⚠️ Wake Lock request failed:', err);
+    }
+  } else {
+    console.log('ℹ️ Wake Lock API not supported in this browser');
+  }
+};
+
+// Release Wake Lock after transfer completes
+const releaseWakeLock = async () => {
+  if (wakeLock) {
+    try {
+      await wakeLock.release();
+      wakeLock = null;
+      console.log('🔓 Wake Lock released after transfer');
+    } catch (err) {
+      console.warn('⚠️ Wake Lock release failed:', err);
+    }
+  }
+};
+
 // QR Code modal state
 const showQrCodeModal = ref(false);
 const qrCodeModalCanvas = ref<HTMLCanvasElement | null>(null);
@@ -1564,6 +1598,9 @@ const openQrFileDialog = async () => {
       };
     });
 
+    // Request Wake Lock to keep tab active during transfer
+    await requestWakeLock();
+
     try {
       await sendFilesViaQRConnect({
         dataChannel: qrDataChannel.value,
@@ -1592,6 +1629,9 @@ const openQrFileDialog = async () => {
           });
           store.session.curr = store.session.total;
 
+          // Release Wake Lock after successful transfer
+          releaseWakeLock();
+
           // Close dialog after 1 second
           setTimeout(() => {
             store.session.state = SessionState.idle;
@@ -1608,6 +1648,9 @@ const openQrFileDialog = async () => {
             }
           });
 
+          // Release Wake Lock on error
+          releaseWakeLock();
+
           // Close dialog after 2 seconds
           setTimeout(() => {
             store.session.state = SessionState.idle;
@@ -1617,6 +1660,8 @@ const openQrFileDialog = async () => {
     } catch (error) {
       logError(error as Error, 'QR_FILE_UPLOAD');
       store.session.state = SessionState.idle;
+      // Release Wake Lock on exception
+      releaseWakeLock();
     }
   };
 

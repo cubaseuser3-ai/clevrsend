@@ -98,6 +98,18 @@ export async function setupConnection({
   if (!store._loopStarted) {
     store._loopStarted = true;
     connectionLoop().then(() => console.log("Connection loop ended"));
+
+    // Setup Page Visibility API for auto-reconnect on tab return
+    if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', () => {
+        if (!document.hidden && !store.signaling) {
+          console.log('📱 Tab became visible and no connection - reconnecting...');
+          // Connection will be reestablished by the connection loop
+          // which runs continuously and tries to reconnect on failure
+        }
+      });
+      console.log('✅ Page Visibility API listener registered');
+    }
   }
 }
 
