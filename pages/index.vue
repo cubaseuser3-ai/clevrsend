@@ -1795,6 +1795,10 @@ const generateQrSendCode = async () => {
       }
     });
 
+    // Stop loading state and wait for canvas to render
+    qrCodeGenerating.value = false;
+    await nextTick();
+
     // Generate QR code
     if (!qrSendCanvas.value) {
       throw new Error('Canvas element not found');
@@ -1865,7 +1869,6 @@ const generateQrSendCode = async () => {
     };
     logQR('👂 Listening for ICE_CANDIDATE via Trickle ICE (SENDER)...');
 
-    qrCodeGenerating.value = false;
     // Note: waitingForAnswer is NOT set to true anymore - answer comes automatically via WebSocket!
   } catch (error) {
     console.error('QR generation error:', error);
