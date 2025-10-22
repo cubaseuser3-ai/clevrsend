@@ -418,49 +418,29 @@
           </div>
 
           <div v-else class="qr-code-display-container">
-            <!-- Canvas always rendered but hidden when loading -->
-            <div class="qr-code-display-large" :style="{ display: qrCodeGenerating ? 'none' : 'block' }">
-              <div class="qr-code-content">
-                <div class="qr-code-header">
-                  <Icon name="mdi:qrcode-scan" size="32" class="qr-header-icon" />
-                  <span class="qr-header-text">Scan mich!</span>
-                </div>
-                <canvas ref="qrSendCanvas" class="qr-canvas"></canvas>
-              </div>
-            </div>
-
             <!-- Loading State -->
             <div v-if="qrCodeGenerating" class="qr-loading">
               <div class="qr-loading-spinner"></div>
-              <p class="qr-loading-text">
-                QR-Code wird generiert...<br>
-                <span class="qr-wait-hint">Bitte warten, es kann bis zu 10 Sekunden dauern</span>
-              </p>
+              <p class="qr-loading-text">QR-Code wird generiert...</p>
             </div>
 
-            <!-- QR Code Display Info -->
-            <template v-else>
-              <p class="qr-code-hint">Lass den Empfänger diesen Code scannen</p>
+            <!-- QR Code - Simple and Clean -->
+            <div v-else class="qr-code-wrapper">
+              <div class="qr-code-box">
+                <canvas ref="qrSendCanvas" class="qr-canvas"></canvas>
+              </div>
 
-              <!-- Link Display and Copy Button -->
-              <div class="qr-link-container">
-                <div class="qr-link-display">
-                  <Icon name="mdi:link" size="20" />
-                  <span class="qr-link-text">{{ qrSendUrl }}</span>
-                </div>
-                <button @click="copyQrLink" class="qr-copy-button">
+              <div class="qr-actions">
+                <button @click="copyQrLink" class="qr-action-btn qr-copy">
                   <Icon name="mdi:content-copy" size="20" />
                   <span>Link kopieren</span>
                 </button>
+                <button @click="showQrSendCode = false" class="qr-action-btn qr-close">
+                  <Icon name="mdi:close" size="20" />
+                  <span>Schließen</span>
+                </button>
               </div>
-
-              <!-- Note: Old two-way handshake UI removed - answer now comes automatically via WebSocket -->
-
-              <button @click="showQrSendCode = false; waitingForAnswer = false" class="qr-close-button">
-                <Icon name="mdi:close" size="20" />
-                <span>Schließen</span>
-              </button>
-            </template>
+            </div>
           </div>
         </div>
 
@@ -484,34 +464,22 @@
 
           <!-- Show answer QR code after scanning -->
           <div v-else class="qr-code-display-container">
-            <!-- Canvas for answer -->
-            <div class="qr-code-display-large">
-              <div class="qr-code-content">
-                <div class="qr-code-header">
-                  <Icon name="mdi:qrcode-scan" size="32" class="qr-header-icon" />
-                  <span class="qr-header-text">Deine Antwort</span>
-                </div>
+            <div class="qr-code-wrapper">
+              <div class="qr-code-box">
                 <canvas ref="qrAnswerCanvas" class="qr-canvas"></canvas>
               </div>
-            </div>
-            <p class="qr-code-hint">Zeige diesen Code dem Sender zum Scannen</p>
 
-            <!-- Link Display and Copy Button for Answer -->
-            <div class="qr-link-container">
-              <div class="qr-link-display">
-                <Icon name="mdi:link" size="20" />
-                <span class="qr-link-text">{{ qrAnswerUrl }}</span>
+              <div class="qr-actions">
+                <button @click="copyAnswerLink" class="qr-action-btn qr-copy">
+                  <Icon name="mdi:content-copy" size="20" />
+                  <span>Link kopieren</span>
+                </button>
+                <button @click="showQrAnswerCode = false" class="qr-action-btn qr-close">
+                  <Icon name="mdi:close" size="20" />
+                  <span>Schließen</span>
+                </button>
               </div>
-              <button @click="copyAnswerLink" class="qr-copy-button">
-                <Icon name="mdi:content-copy" size="20" />
-                <span>Link kopieren</span>
-              </button>
             </div>
-
-            <button @click="showQrAnswerCode = false" class="qr-close-button">
-              <Icon name="mdi:close" size="20" />
-              <span>Schließen</span>
-            </button>
           </div>
         </div>
 
@@ -3760,140 +3728,88 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 1.5rem;
-  padding: 1rem 0;
-  position: relative;
-  z-index: 100;
+  padding: 1.5rem 0;
+  width: 100%;
 }
 
-.qr-code-display-large {
-  position: relative;
-  background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+.qr-code-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+  width: 100%;
+  max-width: 400px;
+}
+
+.qr-code-box {
+  background: white;
   padding: 2rem;
-  border-radius: 1.5rem;
-  box-shadow:
-    0 20px 60px rgba(0, 0, 0, 0.4),
-    0 0 0 1px rgba(255, 255, 255, 0.1) inset;
+  border-radius: 1rem;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
   display: flex;
   justify-content: center;
   align-items: center;
-  width: 100%;
-  max-width: 400px;
-  overflow: hidden;
-  animation: qr-fade-in 0.5s ease-out;
-  z-index: 101;
-}
-
-.qr-code-display-large::before {
-  content: '';
-  position: absolute;
-  inset: -2px;
-  background: linear-gradient(45deg,
-    #ff6b6b,
-    #4ecdc4,
-    #45b7d1,
-    #96ceb4,
-    #ffeaa7,
-    #dfe6e9,
-    #74b9ff,
-    #a29bfe,
-    #ff6b6b
-  );
-  background-size: 400% 400%;
-  border-radius: 1.5rem;
-  z-index: -1;
-  animation: qr-border-glow 8s ease infinite;
-  opacity: 0.8;
-}
-
-.qr-code-display-large::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
-  border-radius: 1.5rem;
-  z-index: -1;
-}
-
-@keyframes qr-border-glow {
-  0%, 100% {
-    background-position: 0% 50%;
-  }
-  50% {
-    background-position: 100% 50%;
-  }
+  animation: qr-fade-in 0.3s ease-out;
 }
 
 @keyframes qr-fade-in {
   from {
     opacity: 0;
-    transform: scale(0.95);
+    transform: translateY(10px);
   }
   to {
     opacity: 1;
-    transform: scale(1);
+    transform: translateY(0);
   }
-}
-
-.qr-code-content {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1rem;
-  width: 100%;
-}
-
-.qr-code-header {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 0.75rem 1.5rem;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-radius: 2rem;
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
-  animation: qr-header-pulse 2s ease-in-out infinite;
-}
-
-@keyframes qr-header-pulse {
-  0%, 100% {
-    transform: scale(1);
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
-  }
-  50% {
-    transform: scale(1.05);
-    box-shadow: 0 6px 16px rgba(102, 126, 234, 0.6);
-  }
-}
-
-.qr-header-icon {
-  color: white;
-  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
-}
-
-.qr-header-text {
-  color: white;
-  font-size: 1.1rem;
-  font-weight: 700;
-  letter-spacing: 0.5px;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 .qr-canvas {
   display: block;
-  margin: 0 auto;
   max-width: 100%;
   height: auto;
-  border-radius: 0.75rem;
-  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.1));
 }
 
-.qr-code-hint {
-  color: rgba(255, 255, 255, 0.9);
-  text-align: center;
+.qr-actions {
+  display: flex;
+  gap: 1rem;
+  width: 100%;
+}
+
+.qr-action-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.875rem 1.5rem;
+  border: none;
+  border-radius: 0.75rem;
   font-size: 1rem;
-  font-weight: 500;
-  letter-spacing: 0.3px;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.qr-action-btn.qr-copy {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.qr-action-btn.qr-copy:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+}
+
+.qr-action-btn.qr-close {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.qr-action-btn.qr-close:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.3);
 }
 
 .qr-link-container {
