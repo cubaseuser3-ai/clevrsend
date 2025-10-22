@@ -3762,6 +3762,8 @@ onMounted(async () => {
   align-items: center;
   gap: 1.5rem;
   padding: 1rem 0;
+  position: relative;
+  z-index: 100;
 }
 
 .qr-code-display-large {
@@ -3779,6 +3781,7 @@ onMounted(async () => {
   max-width: 400px;
   overflow: hidden;
   animation: qr-fade-in 0.5s ease-out;
+  z-index: 101;
 }
 
 .qr-code-display-large::before {

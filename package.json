@@ -1,6 +1,6 @@
 {
   "name": "clevrsend",
-  "version": "1.5.5",
+  "version": "1.5.6",
   "private": true,
   "type": "module",
   "description": "Cross-network file sharing with Trickle ICE",
