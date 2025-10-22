@@ -450,29 +450,55 @@ export function setupQRConnectionListeners(
   let iceRestartAttempts = 0;
   const maxIceRestarts = 2;
 
+  // Add reconnection timer to handle transient disconnections
+  let reconnectionTimer: NodeJS.Timeout | null = null;
+
   pc.addEventListener('connectionstatechange', () => {
     console.log('QR-Connect: Connection state:', pc.connectionState);
 
     if (pc.connectionState === 'connected') {
       hasConnected = true;
       iceRestartAttempts = 0;
+      // Clear any pending reconnection timer
+      if (reconnectionTimer) {
+        clearTimeout(reconnectionTimer);
+        reconnectionTimer = null;
+      }
       callbacks.onConnected?.();
     } else if (pc.connectionState === 'disconnected') {
-      // Only treat as error if we never connected
-      if (!hasConnected) {
-        console.log('⚠️ Disconnected before first connection - may recover');
-        callbacks.onError?.(new Error('Verbindung wird aufgebaut...'));
-      } else {
-        callbacks.onDisconnected?.();
+      // Wait a bit before treating as error - connection might recover
+      console.log('⚠️ Connection disconnected, waiting 3s before reconnect attempt...');
+
+      if (reconnectionTimer) {
+        clearTimeout(reconnectionTimer);
       }
+
+      reconnectionTimer = setTimeout(() => {
+        // Check if still disconnected after timeout
+        if (pc.connectionState === 'disconnected' || pc.connectionState === 'failed') {
+          if (iceRestartAttempts < maxIceRestarts) {
+            console.log(`🔄 Still disconnected after 3s, attempting ICE restart ${iceRestartAttempts + 1}/${maxIceRestarts}`);
+            iceRestartAttempts++;
+            callbacks.onError?.(new Error(`Verbindung unterbrochen, Wiederverbindung ${iceRestartAttempts}/${maxIceRestarts}...`));
+          } else {
+            console.log('❌ Max ICE restart attempts reached, giving up');
+            callbacks.onDisconnected?.();
+          }
+        }
+      }, 3000);
     } else if (pc.connectionState === 'failed') {
-      if (!hasConnected && iceRestartAttempts < maxIceRestarts) {
-        console.log(`🔄 ICE failed, attempting restart ${iceRestartAttempts + 1}/${maxIceRestarts}`);
+      // Clear any pending reconnection timer
+      if (reconnectionTimer) {
+        clearTimeout(reconnectionTimer);
+        reconnectionTimer = null;
+      }
+
+      if (iceRestartAttempts < maxIceRestarts) {
+        console.log(`🔄 Connection failed, attempting reconnect ${iceRestartAttempts + 1}/${maxIceRestarts}`);
         iceRestartAttempts++;
-        // Trigger ICE restart
-        pc.restartIce();
         callbacks.onError?.(new Error(`Verbindungsaufbau fehlgeschlagen, Versuch ${iceRestartAttempts}/${maxIceRestarts}...`));
       } else {
+        console.log('❌ Max reconnect attempts reached, connection failed');
         callbacks.onFailed?.();
         callbacks.onDisconnected?.();
       }

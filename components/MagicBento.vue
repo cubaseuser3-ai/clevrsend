@@ -16,7 +16,10 @@
     >
       <div class="bento-card-content">
         <div class="bento-header">
-          <h3 class="bento-title" v-html="item.title"></h3>
+          <h3 class="bento-title">
+            <span v-if="item.titleLabel" class="title-label">{{ item.titleLabel }}</span>
+            <span class="title-value">{{ item.title }}</span>
+          </h3>
           <transition name="fade">
             <div v-if="item.isNewest && item.showNewestLabel" class="newest-badge">
               Neuster Empfänger
@@ -36,6 +39,7 @@ import { ref, computed } from 'vue';
 
 interface BentoItem {
   title: string;
+  titleLabel?: string;
   description?: string;
   timestamp?: string;
   size: 'small' | 'medium' | 'large' | 'wide' | 'tall';
@@ -215,6 +219,18 @@ const getParticleStyle = (i: number) => {
   color: white;
   margin: 0;
   flex: 1;
+}
+
+.bento-title .title-label {
+  font-size: 0.9rem;
+  color: rgba(200, 200, 200, 0.9);
+  font-weight: 400;
+}
+
+.bento-title .title-value {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: white;
 }
 
 .newest-badge {

@@ -62,5 +62,16 @@ export default defineNuxtConfig({
     prerender: {
       autoSubfolderIndex: false,
     },
+    routeRules: {
+      '/**': {
+        headers: {
+          'X-Frame-Options': 'DENY',
+          'X-Content-Type-Options': 'nosniff',
+          'Referrer-Policy': 'strict-origin-when-cross-origin',
+          'Permissions-Policy': 'geolocation=(), microphone=(), camera=()',
+          'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' wss://clevrsend-signaling-server-production.up.railway.app wss://signal.clevrsend.app https://clevrsend-signaling-server-production.up.railway.app https://signal.clevrsend.app; frame-ancestors 'none';",
+        },
+      },
+    },
   },
 });

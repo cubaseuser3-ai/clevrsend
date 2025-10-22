@@ -420,7 +420,13 @@
           <div v-else class="qr-code-display-container">
             <!-- Canvas always rendered but hidden when loading -->
             <div class="qr-code-display-large" :style="{ display: qrCodeGenerating ? 'none' : 'block' }">
-              <canvas ref="qrSendCanvas" class="qr-canvas"></canvas>
+              <div class="qr-code-content">
+                <div class="qr-code-header">
+                  <Icon name="mdi:qrcode-scan" size="32" class="qr-header-icon" />
+                  <span class="qr-header-text">Scan mich!</span>
+                </div>
+                <canvas ref="qrSendCanvas" class="qr-canvas"></canvas>
+              </div>
             </div>
 
             <!-- Loading State -->
@@ -480,7 +486,13 @@
           <div v-else class="qr-code-display-container">
             <!-- Canvas for answer -->
             <div class="qr-code-display-large">
-              <canvas ref="qrAnswerCanvas" class="qr-canvas"></canvas>
+              <div class="qr-code-content">
+                <div class="qr-code-header">
+                  <Icon name="mdi:qrcode-scan" size="32" class="qr-header-icon" />
+                  <span class="qr-header-text">Deine Antwort</span>
+                </div>
+                <canvas ref="qrAnswerCanvas" class="qr-canvas"></canvas>
+              </div>
             </div>
             <p class="qr-code-hint">Zeige diesen Code dem Sender zum Scannen</p>
 
@@ -1288,7 +1300,8 @@ const allItems = computed(() => {
   // Eigene Karte (Orange)
   if (store.client) {
     items.push({
-      title: `<span style="font-size: 0.9rem; color: rgba(200, 200, 200, 0.9); font-weight: 400;">Dein Übertragungsname:</span> ${store.client.alias}`,
+      title: store.client.alias,
+      titleLabel: 'Dein Übertragungsname:',
       description: store.client.deviceModel,
       size: 'medium' as 'medium',
       glow: true,
@@ -1300,7 +1313,8 @@ const allItems = computed(() => {
   // Peer Karten (Custom color)
   store.peers.forEach((peer) => {
     items.push({
-      title: `<span style="font-size: 0.9rem; color: rgba(200, 200, 200, 0.9); font-weight: 400;">Empfänger:</span> ${peer.alias}`,
+      title: peer.alias,
+      titleLabel: 'Empfänger:',
       description: peer.deviceModel,
       timestamp: getTimeElapsed(peer.id),
       size: 'medium' as 'medium',
@@ -1337,7 +1351,8 @@ const emptyStateItems = computed(() => {
   // Eigene Karte
   if (store.client) {
     items.push({
-      title: `<span style="font-size: 0.9rem; color: rgba(200, 200, 200, 0.9); font-weight: 400;">Dein Übertragungsname:</span> ${store.client.alias}`,
+      title: store.client.alias,
+      titleLabel: 'Dein Übertragungsname:',
       description: store.client.deviceModel,
       size: 'medium' as 'medium',
       glow: true,
@@ -1744,10 +1759,13 @@ const generateQrSendCode = async () => {
         message: 'Verbindung hergestellt! Bereit für Dateitransfer'
       };
 
+      // Scroll to top to show "Dateien senden" button
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+
       // Setup file receiver (sender can also receive files)
       setupQRFileReceiver(dataChannel);
 
-      // Start keep-alive pings every 5 seconds
+      // Start keep-alive pings every 2 seconds (increased frequency for stability)
       keepAliveInterval = setInterval(() => {
         if (dataChannel.readyState === 'open') {
           try {
@@ -1758,7 +1776,7 @@ const generateQrSendCode = async () => {
         } else {
           if (keepAliveInterval) clearInterval(keepAliveInterval);
         }
-      }, 5000);
+      }, 2000);
     });
 
     // Clear keep-alive on close
@@ -1777,6 +1795,8 @@ const generateQrSendCode = async () => {
           icon: 'mdi:check-circle',
           message: 'Verbindung hergestellt! Bereit für Dateitransfer'
         };
+        // Scroll to top to show "Dateien senden" button
+        window.scrollTo({ top: 0, behavior: 'smooth' });
       },
       onDisconnected: () => {
         qrConnectionStatus.value = {
@@ -2110,13 +2130,16 @@ const handleQrScanned = async (qrData: string) => {
           qrConnectionStatus.value = {
             type: 'success',
             icon: 'mdi:check-circle',
-            message: `Verbunden mit ${peerAlias}! Bereit für Dateitransfer`
+            message: 'Verbunden! Bereit für Dateitransfer'
           };
+
+          // Scroll to top to show "Dateien senden" button
+          window.scrollTo({ top: 0, behavior: 'smooth' });
 
           // Setup file receiver
           setupQRFileReceiver(dataChannel);
 
-          // Start keep-alive pings every 5 seconds
+          // Start keep-alive pings every 2 seconds (increased frequency for stability)
           keepAliveInterval = setInterval(() => {
             if (dataChannel.readyState === 'open') {
               try {
@@ -2127,7 +2150,7 @@ const handleQrScanned = async (qrData: string) => {
             } else {
               if (keepAliveInterval) clearInterval(keepAliveInterval);
             }
-          }, 5000);
+          }, 2000);
         });
 
         dataChannel.addEventListener('close', () => {
@@ -3737,18 +3760,119 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 1rem;
+  gap: 1.5rem;
+  padding: 1rem 0;
 }
 
 .qr-code-display-large {
-  background: white;
-  padding: 1.5rem;
-  border-radius: 1rem;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+  position: relative;
+  background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+  padding: 2rem;
+  border-radius: 1.5rem;
+  box-shadow:
+    0 20px 60px rgba(0, 0, 0, 0.4),
+    0 0 0 1px rgba(255, 255, 255, 0.1) inset;
   display: flex;
   justify-content: center;
   align-items: center;
   width: 100%;
+  max-width: 400px;
+  overflow: hidden;
+  animation: qr-fade-in 0.5s ease-out;
+}
+
+.qr-code-display-large::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  background: linear-gradient(45deg,
+    #ff6b6b,
+    #4ecdc4,
+    #45b7d1,
+    #96ceb4,
+    #ffeaa7,
+    #dfe6e9,
+    #74b9ff,
+    #a29bfe,
+    #ff6b6b
+  );
+  background-size: 400% 400%;
+  border-radius: 1.5rem;
+  z-index: -1;
+  animation: qr-border-glow 8s ease infinite;
+  opacity: 0.8;
+}
+
+.qr-code-display-large::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+  border-radius: 1.5rem;
+  z-index: -1;
+}
+
+@keyframes qr-border-glow {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+@keyframes qr-fade-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.qr-code-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  width: 100%;
+}
+
+.qr-code-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1.5rem;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 2rem;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+  animation: qr-header-pulse 2s ease-in-out infinite;
+}
+
+@keyframes qr-header-pulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+  }
+  50% {
+    transform: scale(1.05);
+    box-shadow: 0 6px 16px rgba(102, 126, 234, 0.6);
+  }
+}
+
+.qr-header-icon {
+  color: white;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+}
+
+.qr-header-text {
+  color: white;
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 .qr-canvas {
@@ -3756,11 +3880,17 @@ onMounted(async () => {
   margin: 0 auto;
   max-width: 100%;
   height: auto;
+  border-radius: 0.75rem;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.1));
 }
 
 .qr-code-hint {
-  color: rgba(255, 255, 255, 0.7);
+  color: rgba(255, 255, 255, 0.9);
   text-align: center;
+  font-size: 1rem;
+  font-weight: 500;
+  letter-spacing: 0.3px;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 .qr-link-container {
